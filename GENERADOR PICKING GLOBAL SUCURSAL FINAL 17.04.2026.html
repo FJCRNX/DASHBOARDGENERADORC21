@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Picking Pendiente — GK</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --bg2: #181b24; --bg3: #1e2130; --bg4: #252a3a;
+    --accent: #f97316; --accent2: #fb923c; --accent3: #38bdf8;
+    --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
+    --border: #2d3555; --border2: #3a4160;
+    --kumo: #38bdf8; --vtas: #a78bfa;
+    --danger: #f87171; --success: #4ade80; --warn: #fbbf24;
+    --rad: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .header-title { display: flex; align-items: center; gap: 12px; }
+  .header-logo { width: 38px; height: 38px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff; }
+  .header h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+  .header .subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .badge-date { background: var(--bg3); border: 1px solid var(--border); padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--text2); }
+
+  /* UPLOAD ZONE */
+  #upload-section { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 40px; }
+  .upload-card { background: var(--bg2); border: 2px dashed var(--border2); border-radius: 20px; padding: 60px 80px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; max-width: 600px; width: 100%; }
+  .upload-card:hover, .upload-card.drag { border-color: var(--accent); background: rgba(249,115,22,0.06); }
+  .upload-icon { font-size: 52px; margin-bottom: 16px; }
+  .upload-card h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+  .upload-card p { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+  .btn-upload { background: var(--accent); color: #fff; border: none; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-upload:hover { background: var(--accent2); }
+  #file-input { display: none; }
+
+  /* DASHBOARD */
+  #dashboard { display: none; padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+
+  /* SECTION TITLE + COPY BUTTON */
+  .section-header { display: flex; align-items: center; gap: 8px; margin: 28px 0 14px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); display: flex; align-items: center; gap: 8px; flex: 1; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .btn-copy { background: transparent; color: var(--text2); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; transition: all 0.2s; flex-shrink: 0; }
+  .btn-copy:hover { background: rgba(56,189,248,0.1); color: var(--accent3); border-color: var(--accent3); }
+  .btn-copy.copied { background: rgba(74,222,128,0.1); color: var(--success); border-color: var(--success); }
+
+  /* DOWNLOAD BAR */
+  .download-bar { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .download-bar span { font-size: 12px; color: var(--text2); }
+  .btn-download { background: var(--accent); color: #fff; border: none; padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-download:hover { background: var(--accent2); }
+  .btn-download-outline { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-download-outline:hover { background: rgba(56,189,248,0.1); }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; position: relative; overflow: hidden; }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent); }
+  .kpi-card.blue::before { background: var(--accent3); }
+  .kpi-card.green::before { background: var(--success); }
+  .kpi-card.purple::before { background: var(--vtas); }
+  .kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .kpi-val { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* ORG CARDS */
+  .org-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .org-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; }
+  .org-card h4 { font-size: 15px; font-weight: 700; color: var(--accent3); margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .org-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+  .org-row .label { color: var(--text2); }
+  .org-row .val { font-weight: 600; color: var(--text); }
+
+  /* CHARTS GRID */
+  .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .charts-3col { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+  @media (max-width: 1100px) { .charts-2col, .charts-3col { grid-template-columns: 1fr; } }
+  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 18px 20px; }
+  .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .chart-card h3 span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .chart-card h3 span.kumo { background: var(--kumo); }
+  .chart-card h3 span.vtas { background: var(--vtas); }
+
+  /* TABLE — COMPACT for plazo */
+  .table-wrap { overflow-x: auto; border-radius: var(--rad); }
+  .table-compact { overflow-x: visible; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: var(--bg3); }
+  thead th { padding: 8px 6px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: normal; word-break: break-word; line-height: 1.25; vertical-align: bottom; }
+  thead th.th-compact { text-align: center; max-width: 72px; min-width: 48px; font-size: 9px; }
+  thead th.th-fixed { white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 8px 6px; color: var(--text); }
+  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.muted { color: var(--text2); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+  .pill.alto { background: rgba(248,113,113,0.15); color: var(--danger); }
+  .pill.medio { background: rgba(251,191,36,0.15); color: var(--warn); }
+  .pill.bajo { background: rgba(74,222,128,0.15); color: var(--success); }
+
+  /* ACUERDOS */
+  .acuerdos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .acuerdo-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }
+  .acuerdo-header { background: var(--bg3); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .acuerdo-header .centro-name { font-size: 15px; font-weight: 700; color: var(--accent3); }
+  .acuerdo-header .centro-badge { font-size: 11px; background: rgba(249,115,22,0.15); color: var(--accent); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .acuerdo-body { padding: 14px 16px; }
+  .acuerdo-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .mini-kpi { background: var(--bg3); border-radius: 6px; padding: 8px 10px; }
+  .mini-kpi .mk-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .mini-kpi .mk-val { font-size: 16px; font-weight: 700; color: var(--text); }
+  .acuerdo-list { list-style: none; padding: 0; }
+  .acuerdo-list li { display: flex; gap: 8px; padding: 5px 0; font-size: 12px; color: var(--text2); border-bottom: 1px solid var(--border); }
+  .acuerdo-list li:last-child { border-bottom: none; }
+  .acuerdo-list li::before { content: '▸'; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* LOADING */
+  #loading { display: none; position: fixed; inset: 0; background: rgba(15,17,23,0.9); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-row select { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 7px 12px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+  .filter-row label { font-size: 12px; color: var(--text2); }
+  .reset-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 7px 14px; border-radius: 7px; font-size: 12px; cursor: pointer; }
+  .reset-btn:hover { background: rgba(249,115,22,0.1); }
+
+  .top-bar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 10px 28px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .top-bar span { font-size: 12px; color: var(--text2); }
+  .top-bar strong { color: var(--accent); }
+  .file-name { font-size: 13px; color: var(--text); background: var(--bg3); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 28px; right: 28px; background: var(--success); color: #000; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="toast">✓ Copiado al portapapeles</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span style="color:var(--text2);font-size:14px;">Procesando datos...</span>
+</div>
+
+<div class="header">
+  <div class="header-title">
+    <div class="header-logo">GK</div>
+    <div>
+      <h1>Dashboard Picking Pendiente</h1>
+      <div class="subtitle">Análisis operativo y comercial · VA05 "Creado por: Francisco Javier Cerezo Ramos"</div>
+    </div>
+  </div>
+  <div class="badge-date" id="badge-date">Sin datos cargados</div>
+</div>
+
+<!-- UPLOAD -->
+<div id="upload-section">
+  <div class="upload-card" id="drop-zone">
+    <div class="upload-icon">📊</div>
+    <h2>Cargar archivo Excel</h2>
+    <p>Arrastra tu archivo <strong>.xlsx</strong> de picking pendiente (VA05) aquí,<br>o haz clic para seleccionarlo desde tu equipo.</p>
+    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Seleccionar archivo</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" />
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="top-bar" id="top-bar" style="display:none;">
+  <span>Archivo: </span><span class="file-name" id="file-label">—</span>
+  <span style="margin-left:8px;">Filtros:</span>
+  <select id="filter-org" onchange="applyFilters()">
+    <option value="">Todas las Org. Ventas</option>
+  </select>
+  <select id="filter-centro" onchange="applyFilters()">
+    <option value="">Todos los Centros</option>
+  </select>
+  <button class="reset-btn" onclick="resetFilters()">✕ Reset</button>
+  <div style="margin-left:auto;display:flex;gap:8px;">
+    <button class="btn-download" onclick="downloadReport()">📄 Descargar Informe Word</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <!-- DOWNLOAD BAR -->
+  <div class="download-bar" id="download-bar">
+    <span>📤 Exportar:</span>
+    <button class="btn-download" onclick="downloadReport()">📄 Descargar Informe Ejecutivo Word (.docx)</button>
+    <span style="color:var(--text3);font-size:11px">El informe incluye gráficas y datos según los filtros activos · Compatible con Outlook</span>
+  </div>
+
+  <!-- GLOBAL KPIs -->
+  <div class="section-header">
+    <div class="section-title">Indicadores Globales</div>
+    <button class="btn-copy" onclick="copySection('global-kpis', 'kpis', this)">📋 Copiar</button>
+  </div>
+  <div class="kpi-grid" id="global-kpis"></div>
+
+  <!-- ORG VENTAS -->
+  <div class="section-header">
+    <div class="section-title">Por Organización de Ventas</div>
+    <button class="btn-copy" onclick="copySection('org-grid', 'org', this)">📋 Copiar</button>
+  </div>
+  <div class="org-grid" id="org-grid"></div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="section-header">
+    <div class="section-title">Picking Pendiente por Centro</div>
+    <button class="btn-copy" onclick="copyChartsSection('charts-centro', this)">📋 Copiar texto</button>
+  </div>
+  <div class="charts-2col" id="charts-centro">
+    <div class="chart-card">
+      <h3>Pedidos únicos pendientes por centro (Top 20)</h3>
+      <div style="position:relative;height:420px;"><canvas id="chartPedidosCentro" role="img" aria-label="Pedidos pendientes por centro"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Costo de venta pendiente por centro (Top 20)</h3>
+      <div style="position:relative;height:420px;"><canvas id="chartCostoCentro" role="img" aria-label="Costo de venta pendiente por centro"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="section-header">
+    <div class="section-title">Plazo de Entrega por Centro y Tipo de Transacción (pedidos únicos s/ duplicados)</div>
+    <button class="btn-copy" onclick="copyChartsSection('charts-plazo', this)">📋 Copiar texto</button>
+  </div>
+  <div class="charts-2col" id="charts-plazo">
+    <div class="chart-card">
+      <h3><span class="kumo"></span>KUMO ENTREGAS — Plazo por centro (Top 15)</h3>
+      <div style="position:relative;height:460px;"><canvas id="chartPlazoKumo" role="img" aria-label="Plazo de entrega KUMO por centro"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3><span class="vtas"></span>ZVA05VTAS — Plazo por centro (Top 15)</h3>
+      <div style="position:relative;height:460px;"><canvas id="chartPlazoVtas" role="img" aria-label="Plazo de entrega ZVA05VTAS por centro"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 3 -->
+  <div class="section-header">
+    <div class="section-title">Costo de Venta por Centro y Tipo de Transacción</div>
+    <button class="btn-copy" onclick="copyChartsSection('charts-costo-tx', this)">📋 Copiar texto</button>
+  </div>
+  <div class="charts-2col" id="charts-costo-tx">
+    <div class="chart-card">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--kumo)"></div>KUMO ENTREGAS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--vtas)"></div>ZVA05VTAS</div>
+      </div>
+      <div style="position:relative;height:440px;"><canvas id="chartCostoTx" role="img" aria-label="Costo por transaccion y centro"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Distribución renglones por tipo de transacción</h3>
+      <div style="position:relative;height:240px;margin-bottom:16px;"><canvas id="chartDonut" role="img" aria-label="Distribucion por transaccion"></canvas></div>
+      <h3 style="margin-top:8px;">Pedidos únicos por organización de ventas</h3>
+      <div style="position:relative;height:160px;"><canvas id="chartOrgBar" role="img" aria-label="Pedidos por org ventas"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TABLE: Plazo por centro detalle — COMPACT -->
+  <div class="section-header">
+    <div class="section-title">Tabla Detalle — Plazo de Entrega por Centro (pedidos distintos)</div>
+    <button class="btn-copy" onclick="copyTableSection('plazo-table', this)">📋 Copiar tabla</button>
+  </div>
+  <div class="chart-card">
+    <div class="filter-row">
+      <label>Transacción:</label>
+      <select id="filter-tx-table" onchange="renderPlazoTable()">
+        <option value="">Ambas</option>
+        <option value="KUMO ENTREGAS">KUMO ENTREGAS</option>
+        <option value="ZVA05VTAS">ZVA05VTAS</option>
+      </select>
+    </div>
+    <div class="table-compact" id="plazo-table"></div>
+  </div>
+
+  <!-- TOP SUCURSALES -->
+  <div class="section-header">
+    <div class="section-title">Top 15 Sucursales por Costo de Venta Pendiente</div>
+    <button class="btn-copy" onclick="copyTableSection('top-sucursales-table', this)">📋 Copiar tabla</button>
+  </div>
+  <div class="chart-card">
+    <div class="table-wrap" id="top-sucursales-table"></div>
+  </div>
+
+  <!-- COBERTURA OC / TRASPASOS -->
+  <div class="section-header">
+    <div class="section-title">Cobertura de Abasto — OC y Traspasos Activos por Centro</div>
+    <button class="btn-copy" onclick="copyTableSection('cobertura-oc-table', this)">📋 Copiar tabla</button>
+  </div>
+  <div class="chart-card">
+    <p style="font-size:11px;color:var(--text2);margin-bottom:12px;">
+      Por cada <strong style="color:var(--text)">Centro + Código</strong>, se toma el valor de OC/Traspaso tal como aparece en el renglón (sin sumar si el código se repite).
+      Se compara contra la <strong style="color:var(--text)">Cantidad Pendiente total</strong> del código en ese centro para calcular el % de cobertura.
+    </p>
+    <div class="filter-row">
+      <label>Mostrar:</label>
+      <select id="filter-cob-view" onchange="renderCoberturaOC()">
+        <option value="all">Todos los centros</option>
+        <option value="partial">Cobertura parcial (&lt;100%)</option>
+        <option value="full">Cobertura completa (≥100%)</option>
+        <option value="none">Sin cobertura (0%)</option>
+      </select>
+      <label style="margin-left:10px;">Origen:</label>
+      <select id="filter-cob-tipo" onchange="renderCoberturaOC()">
+        <option value="all">OC + Traspasos</option>
+        <option value="oc">Solo OC</option>
+        <option value="traspaso">Solo Traspasos</option>
+      </select>
+    </div>
+    <div class="table-wrap" id="cobertura-oc-table"></div>
+  </div>
+
+  <!-- ACUERDOS Y COMPROMISOS -->
+  <div class="section-header">
+    <div class="section-title">Acuerdos y Compromisos por Centro (Análisis Dinámico)</div>
+    <button class="btn-copy" onclick="copySection('acuerdos-grid', 'acuerdos', this)">📋 Copiar</button>
+  </div>
+  <div class="acuerdos-grid" id="acuerdos-grid"></div>
+
+  <div style="height:40px;"></div>
+</div>
+
+<script>
+let RAW = [], FILTERED = [], charts = {};
+let CURRENT_FILENAME = '';
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || '✓ Copiado al portapapeles';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== COPY HELPERS =====
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (btn) {
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 Copiar'; }, 2500);
+    }
+    showToast('✓ Copiado al portapapeles');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    if (btn) { btn.classList.add('copied'); btn.textContent = '✓ Copiado'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 Copiar'; }, 2500); }
+    showToast('✓ Copiado al portapapeles');
+  });
+}
+
+function getAppliedFilters() {
+  const org = document.getElementById('filter-org').value;
+  const centro = document.getElementById('filter-centro').value;
+  const lines = [];
+  if (org) lines.push('Org. Ventas: ' + org);
+  if (centro) lines.push('Centro: ' + centro);
+  return lines.length ? 'Filtros aplicados: ' + lines.join(' | ') : 'Sin filtros (datos globales)';
+}
+
+function copySection(id, type, btn) {
+  const el = document.getElementById(id);
+  let text = '=== DASHBOARD PICKING PENDIENTE — GK ===\n';
+  text += getAppliedFilters() + '\n';
+  text += 'Fecha: ' + new Date().toLocaleDateString('es-MX') + '\n\n';
+
+  if (type === 'kpis') {
+    text += '--- INDICADORES GLOBALES ---\n';
+    el.querySelectorAll('.kpi-card').forEach(card => {
+      const label = card.querySelector('.kpi-label')?.textContent.trim() || '';
+      const val = card.querySelector('.kpi-val')?.textContent.trim() || '';
+      const sub = card.querySelector('.kpi-sub')?.textContent.trim() || '';
+      text += `• ${label}: ${val}${sub ? ' (' + sub + ')' : ''}\n`;
+    });
+  } else if (type === 'org') {
+    text += '--- POR ORGANIZACIÓN DE VENTAS ---\n';
+    el.querySelectorAll('.org-card').forEach(card => {
+      const title = card.querySelector('h4')?.textContent.trim() || '';
+      text += `\n[${title}]\n`;
+      card.querySelectorAll('.org-row').forEach(row => {
+        const label = row.querySelector('.label')?.textContent.trim() || '';
+        const val = row.querySelector('.val')?.textContent.trim() || '';
+        text += `  ${label}: ${val}\n`;
+      });
+    });
+  } else if (type === 'acuerdos') {
+    text += '--- ACUERDOS Y COMPROMISOS POR CENTRO ---\n';
+    el.querySelectorAll('.acuerdo-card').forEach(card => {
+      const centro = card.querySelector('.centro-name')?.textContent.trim() || '';
+      const nivel = card.querySelector('.centro-badge')?.textContent.trim() || '';
+      text += `\n[${centro}] — Nivel: ${nivel}\n`;
+      card.querySelectorAll('.mini-kpi').forEach(kpi => {
+        const label = kpi.querySelector('.mk-label')?.textContent.trim() || '';
+        const val = kpi.querySelector('.mk-val')?.textContent.trim() || '';
+        text += `  ${label}: ${val}\n`;
+      });
+      text += '  Acuerdos:\n';
+      card.querySelectorAll('.acuerdo-list li').forEach(li => {
+        text += `  ▸ ${li.textContent.trim()}\n`;
+      });
+    });
+  }
+  copyToClipboard(text, btn);
+}
+
+function copyTableSection(id, btn) {
+  const el = document.getElementById(id);
+  let text = '=== DASHBOARD PICKING PENDIENTE — GK ===\n';
+  text += getAppliedFilters() + '\n';
+  text += 'Fecha: ' + new Date().toLocaleDateString('es-MX') + '\n\n';
+
+  const table = el.querySelector('table');
+  if (!table) { showToast('Sin datos en la tabla'); return; }
+
+  const rows = table.querySelectorAll('tr');
+  rows.forEach((row, ri) => {
+    const cells = row.querySelectorAll('th, td');
+    const line = [...cells].map(c => c.textContent.trim().replace(/\s+/g,' ')).join('\t');
+    text += line + '\n';
+    if (ri === 0) text += Array(line.length / 2).fill('─').join('') + '\n';
+  });
+  copyToClipboard(text, btn);
+}
+
+function copyChartsSection(id, btn) {
+  const el = document.getElementById(id);
+  let text = '=== DASHBOARD PICKING PENDIENTE — GK ===\n';
+  text += getAppliedFilters() + '\n';
+  text += 'Fecha: ' + new Date().toLocaleDateString('es-MX') + '\n\n';
+  text += '--- RESUMEN DE GRÁFICAS (Picking por Centro) ---\n';
+  text += '(Las gráficas están disponibles en el reporte HTML descargable)\n\n';
+
+  // Extract chart data from current state
+  const byPedidos = groupBy(FILTERED, 'Centro', rows => countDistinct(rows, 'Numero de Pedido'));
+  const sortedP = Object.entries(byPedidos).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  text += 'Top 10 centros por pedidos únicos:\n';
+  sortedP.forEach(([c, v], i) => { text += `  ${i+1}. ${c}: ${fmt(v)} pedidos\n`; });
+
+  text += '\nTop 10 centros por costo pendiente:\n';
+  const byCosto = groupBy(FILTERED, 'Centro', rows => sumField(rows, 'Costo de Venta Contable Pendiente'));
+  const sortedC = Object.entries(byCosto).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  sortedC.forEach(([c, v], i) => { text += `  ${i+1}. ${c}: ${fmtM(v)}\n`; });
+
+  copyToClipboard(text, btn);
+}
+
+function copyAllSections() {
+  let text = '════════════════════════════════════════\n';
+  text += '  DASHBOARD PICKING PENDIENTE — GK\n';
+  text += '════════════════════════════════════════\n';
+  text += getAppliedFilters() + '\n';
+  text += 'Fecha de reporte: ' + new Date().toLocaleDateString('es-MX') + '\n';
+  if (CURRENT_FILENAME) text += 'Archivo: ' + CURRENT_FILENAME + '\n';
+  text += '\n';
+
+  // KPIs
+  text += '━━━ INDICADORES GLOBALES ━━━\n';
+  document.getElementById('global-kpis').querySelectorAll('.kpi-card').forEach(card => {
+    const label = card.querySelector('.kpi-label')?.textContent.trim() || '';
+    const val = card.querySelector('.kpi-val')?.textContent.trim() || '';
+    text += `• ${label}: ${val}\n`;
+  });
+  text += '\n';
+
+  // Org
+  text += '━━━ POR ORGANIZACIÓN DE VENTAS ━━━\n';
+  document.getElementById('org-grid').querySelectorAll('.org-card').forEach(card => {
+    const title = card.querySelector('h4')?.textContent.trim() || '';
+    text += `[${title}] `;
+    const vals = [];
+    card.querySelectorAll('.org-row').forEach(row => {
+      vals.push(`${row.querySelector('.label')?.textContent.trim()}: ${row.querySelector('.val')?.textContent.trim()}`);
+    });
+    text += vals.join(' | ') + '\n';
+  });
+  text += '\n';
+
+  // Top centros
+  text += '━━━ TOP 10 CENTROS — PEDIDOS ━━━\n';
+  const byP = groupBy(FILTERED, 'Centro', rows => countDistinct(rows, 'Numero de Pedido'));
+  Object.entries(byP).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([c,v],i) => {
+    text += `  ${i+1}. ${c}: ${fmt(v)} pedidos\n`;
+  });
+  text += '\n';
+
+  text += '━━━ TOP 10 CENTROS — COSTO PENDIENTE ━━━\n';
+  const byC2 = groupBy(FILTERED, 'Centro', rows => sumField(rows, 'Costo de Venta Contable Pendiente'));
+  Object.entries(byC2).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([c,v],i) => {
+    text += `  ${i+1}. ${c}: ${fmtM(v)}\n`;
+  });
+  text += '\n';
+
+  // Acuerdos
+  text += '━━━ ACUERDOS Y COMPROMISOS ━━━\n';
+  document.getElementById('acuerdos-grid').querySelectorAll('.acuerdo-card').forEach(card => {
+    const centro = card.querySelector('.centro-name')?.textContent.trim() || '';
+    const nivel = card.querySelector('.centro-badge')?.textContent.trim() || '';
+    text += `\n[${centro}] — ${nivel}\n`;
+    card.querySelectorAll('.acuerdo-list li').forEach(li => {
+      text += `  ▸ ${li.textContent.trim()}\n`;
+    });
+  });
+
+  copyToClipboard(text, null);
+  showToast('✓ Reporte completo copiado');
+}
+
+// ===== DOWNLOAD REPORT AS WORD-COMPATIBLE DOC =====
+function downloadReport() {
+  showToast('⏳ Generando informe ejecutivo...');
+  setTimeout(() => {
+    try {
+      const reportHtml = buildWordReport();
+      // Use application/msword MIME so Word/Outlook opens it natively
+      const blob = new Blob([reportHtml], { type: 'application/vnd.ms-word;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0,10);
+      const org = document.getElementById('filter-org').value.replace(/\s+/g,'_') || 'Global';
+      const centro = document.getElementById('filter-centro').value.replace(/\s+/g,'_') || '';
+      a.href = url;
+      a.download = `Informe_Ejecutivo_Picking_GK_${org}${centro ? '_' + centro : ''}_${dateStr}.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✓ Informe ejecutivo descargado');
+    } catch(e) {
+      showToast('Error al generar informe: ' + e.message);
+    }
+  }, 100);
+}
+
+function captureChartsForExport() {
+  // Chart.js internal key names for each chart
+  const chartKeyMap = {
+    'chartPedidosCentro': 'pedidosCentro',
+    'chartCostoCentro':   'costoCentro',
+    'chartPlazoKumo':     'chartPlazoKumo',
+    'chartPlazoVtas':     'chartPlazoVtas',
+    'chartCostoTx':       'costoTx',
+    'chartDonut':         'donut',
+    'chartOrgBar':        'orgBar'
+  };
+  const chartIds = Object.keys(chartKeyMap);
+  const chartImages = {};
+
+  chartIds.forEach(id => {
+    const canvas = document.getElementById(id);
+    const chartKey = chartKeyMap[id];
+    const chartObj = charts[chartKey];
+    if (!canvas) return;
+
+    // Temporarily set tick colors to dark for export
+    const ticksToRestore = [];
+    if (chartObj) {
+      try {
+        Object.values(chartObj.options.scales || {}).forEach(scale => {
+          if (scale.ticks && scale.ticks.color === '#f1f5f9') {
+            ticksToRestore.push(scale.ticks);
+            scale.ticks.color = '#1a1a1a';
+          }
+        });
+        // Also darken legend labels if present
+        if (chartObj.options.plugins?.legend?.labels?.color === '#94a3b8') {
+          chartObj.options.plugins.legend.labels._orig = '#94a3b8';
+          chartObj.options.plugins.legend.labels.color = '#333333';
+        }
+        chartObj.update('none'); // redraw without animation
+      } catch(e) {}
+    }
+
+    // Capture with white background
+    try {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      ctx.drawImage(canvas, 0, 0);
+      chartImages[id] = tempCanvas.toDataURL('image/png');
+    } catch(e) { chartImages[id] = ''; }
+
+    // Restore original colors
+    if (chartObj) {
+      try {
+        ticksToRestore.forEach(ticks => { ticks.color = '#f1f5f9'; });
+        if (chartObj.options.plugins?.legend?.labels?._orig) {
+          chartObj.options.plugins.legend.labels.color = chartObj.options.plugins.legend.labels._orig;
+          delete chartObj.options.plugins.legend.labels._orig;
+        }
+        chartObj.update('none');
+      } catch(e) {}
+    }
+  });
+
+  return chartImages;
+}
+
+function buildWordReport() {
+  // Capture chart images with dark labels on white background (visible in Word/Outlook)
+  const chartImages = captureChartsForExport();
+
+  const org = document.getElementById('filter-org').value || 'Todas las Org. de Ventas';
+  const centro = document.getElementById('filter-centro').value || 'Todos los Centros';
+  const dateStr = new Date().toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const dateShort = new Date().toISOString().slice(0,10);
+
+  // --- KPIs ---
+  const kpiLines = [];
+  document.getElementById('global-kpis').querySelectorAll('.kpi-card').forEach(card => {
+    kpiLines.push({
+      label: card.querySelector('.kpi-label')?.textContent.trim() || '',
+      val: card.querySelector('.kpi-val')?.textContent.trim() || '',
+      sub: card.querySelector('.kpi-sub')?.textContent.trim() || '',
+      color: card.classList.contains('blue') ? '#0070c0' : card.classList.contains('green') ? '#00b050' : card.classList.contains('purple') ? '#7030a0' : '#c55a11'
+    });
+  });
+
+  // --- Org Cards data ---
+  const orgRows = [];
+  document.getElementById('org-grid').querySelectorAll('.org-card').forEach(card => {
+    const title = card.querySelector('h4')?.textContent.trim() || '';
+    const rows = [];
+    card.querySelectorAll('.org-row').forEach(r => {
+      rows.push({ label: r.querySelector('.label')?.textContent.trim()||'', val: r.querySelector('.val')?.textContent.trim()||'' });
+    });
+    orgRows.push({ title, rows });
+  });
+
+  // --- Plazo table ---
+  const plazoTableEl = document.getElementById('plazo-table').querySelector('table');
+  let plazoTableWord = '';
+  if (plazoTableEl) {
+    plazoTableWord = buildWordTable(plazoTableEl, ['#D6E4F0','#EBF5FB']);
+  }
+
+  // --- Cobertura OC/Traspasos table ---
+  const cobEl = document.getElementById('cobertura-oc-table').querySelector('table');
+  let cobTableWord = '';
+  if (cobEl) {
+    cobTableWord = buildWordTable(cobEl, ['#EAF6EA','#FDFEFE']);
+  }
+
+  // --- Sucursales table ---
+  const sucEl = document.getElementById('top-sucursales-table').querySelector('table');
+  let sucTableWord = '';
+  if (sucEl) {
+    sucTableWord = buildWordTable(sucEl, ['#FEF9E7','#FDFEFE']);
+  }
+
+  // --- Acuerdos data ---
+  const acuerdosData = [];
+  document.getElementById('acuerdos-grid').querySelectorAll('.acuerdo-card').forEach(card => {
+    const centro2 = card.querySelector('.centro-name')?.textContent.trim() || '';
+    const nivel = card.querySelector('.centro-badge')?.textContent.trim() || '';
+    const urgColor = nivel === 'CRÍTICO' ? '#C0392B' : nivel === 'ALTO' ? '#D4AC0D' : nivel === 'MEDIO' ? '#1A5276' : '#1E8449';
+    const kpis = [];
+    card.querySelectorAll('.mini-kpi').forEach(k => {
+      kpis.push({ label: k.querySelector('.mk-label')?.textContent.trim()||'', val: k.querySelector('.mk-val')?.textContent.trim()||'' });
+    });
+    const acuerdos = [];
+    card.querySelectorAll('.acuerdo-list li').forEach(li => acuerdos.push(li.textContent.trim()));
+    acuerdosData.push({ centro: centro2, nivel, urgColor, kpis, acuerdos });
+  });
+
+  // Build KPI table for Word
+  const kpiTableRows = kpiLines.map(k => `
+    <tr>
+      <td style="background:${k.color};width:6px;">&nbsp;</td>
+      <td style="padding:8px 12px;font-size:10pt;color:#555;text-transform:uppercase;font-family:Calibri,Arial,sans-serif;">${k.label}</td>
+      <td style="padding:8px 12px;font-size:16pt;font-weight:bold;color:#222;font-family:Calibri,Arial,sans-serif;">${k.val}</td>
+      <td style="padding:8px 12px;font-size:9pt;color:#888;font-family:Calibri,Arial,sans-serif;">${k.sub}</td>
+    </tr>`).join('');
+
+  // Build Org table for Word
+  const orgColsHtml = orgRows.map(o => `
+    <td style="width:${Math.floor(100/orgRows.length)}%;vertical-align:top;padding:0 6px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BDC3C7;border-radius:6px;overflow:hidden;font-family:Calibri,Arial,sans-serif;">
+        <tr><td colspan="2" style="background:#1F3864;padding:8px 10px;color:#fff;font-weight:bold;font-size:11pt;">${o.title}</td></tr>
+        ${o.rows.map((r,i) => `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+          <td style="padding:5px 8px;font-size:9pt;color:#555;">${r.label}</td>
+          <td style="padding:5px 8px;font-size:9pt;font-weight:bold;color:#1F3864;text-align:right;">${r.val}</td>
+        </tr>`).join('')}
+      </table>
+    </td>`).join('');
+
+  // Build Acuerdos for Word
+  const acuerdosHtml = acuerdosData.map(a => `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;border:1px solid #BDC3C7;font-family:Calibri,Arial,sans-serif;border-collapse:collapse;">
+      <tr>
+        <td style="background:#1F3864;padding:10px 14px;color:#fff;font-size:13pt;font-weight:bold;width:70%;">${a.centro}</td>
+        <td style="background:${a.urgColor};padding:10px 14px;color:#fff;font-size:12pt;font-weight:bold;text-align:center;width:30%;">${a.nivel}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:10px 14px;">
+          <table width="100%" cellpadding="4" cellspacing="4">
+            <tr>
+              ${a.kpis.map(k => `<td style="background:#EBF5FB;border-radius:4px;padding:6px 10px;text-align:center;">
+                <div style="font-size:8pt;color:#555;text-transform:uppercase;">${k.label}</div>
+                <div style="font-size:14pt;font-weight:bold;color:#1F3864;">${k.val}</div>
+              </td>`).join('')}
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:0 14px 12px;">
+          ${a.acuerdos.map(ac => `<p style="margin:4px 0;font-size:10pt;color:#333;padding-left:12px;border-left:3px solid #C55A11;">&#9658; ${ac}</p>`).join('')}
+        </td>
+      </tr>
+    </table>`).join('');
+
+  // Word-compatible HTML with mso namespace (renders perfectly in Word/Outlook)
+  return `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml><![endif]-->
+<style>
+  @page { margin: 2cm 2.5cm; mso-header-margin: 1cm; mso-footer-margin: 1cm; }
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #222; background: #fff; margin: 0; padding: 0; }
+  h1 { font-size: 22pt; color: #1F3864; margin: 0; }
+  h2 { font-size: 14pt; color: #1F3864; border-bottom: 2px solid #C55A11; padding-bottom: 4px; margin-top: 24px; margin-bottom: 12px; }
+  h3 { font-size: 11pt; color: #555; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0; }
+  p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { font-family: Calibri, Arial, sans-serif; }
+  img { display: block; max-width: 100%; height: auto; }
+  .section-divider { border: none; border-top: 2px solid #C55A11; margin: 24px 0 14px 0; }
+</style>
+</head>
+<body>
+
+<!-- HEADER EJECUTIVO -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1F3864;margin-bottom:0;">
+  <tr>
+    <td style="padding:18px 24px;color:#fff;">
+      <table cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="background:#C55A11;width:50px;height:50px;text-align:center;vertical-align:middle;border-radius:8px;">
+            <span style="font-size:20pt;font-weight:bold;color:#fff;">GK</span>
+          </td>
+          <td style="padding-left:16px;">
+            <div style="font-size:20pt;font-weight:bold;color:#fff;">Informe Ejecutivo — Picking Pendiente</div>
+            <div style="font-size:10pt;color:#BDC3C7;margin-top:2px;">Análisis operativo y comercial · VA05 · Francisco Javier Cerezo Ramos</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+    <td style="padding:18px 24px;text-align:right;vertical-align:top;">
+      <div style="color:#fff;font-size:11pt;font-weight:bold;">${dateStr}</div>
+      <div style="color:#BDC3C7;font-size:9pt;margin-top:4px;">Org. Ventas: <span style="color:#C55A11;font-weight:bold;">${org}</span></div>
+      <div style="color:#BDC3C7;font-size:9pt;">Centro: <span style="color:#C55A11;font-weight:bold;">${centro}</span></div>
+      ${CURRENT_FILENAME ? `<div style="color:#BDC3C7;font-size:8pt;margin-top:2px;">Archivo: ${CURRENT_FILENAME}</div>` : ''}
+    </td>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#C55A11;height:4px;"><tr><td></td></tr></table>
+
+<div style="padding:20px 0;">
+
+<!-- INDICADORES GLOBALES -->
+<h2>&#9632; Indicadores Globales</h2>
+<table width="100%" cellpadding="0" cellspacing="4" style="border-collapse:separate;border-spacing:4px;">
+  ${kpiTableRows}
+</table>
+
+<!-- ORG VENTAS -->
+<h2>&#9632; Por Organización de Ventas</h2>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr>${orgColsHtml}</tr>
+</table>
+
+<!-- GRÁFICAS: PEDIDOS Y COSTO POR CENTRO -->
+<h2>&#9632; Picking Pendiente por Centro</h2>
+<table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
+  <tr>
+    <td width="50%" style="vertical-align:top;padding:12px;">
+      <h3>Pedidos únicos pendientes por centro (Top 20)</h3>
+      ${chartImages['chartPedidosCentro'] ? `<img src="${chartImages['chartPedidosCentro']}" width="100%" alt="Pedidos por centro">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
+    </td>
+    <td width="50%" style="vertical-align:top;padding:12px;border-left:1px solid #E0E0E0;">
+      <h3>Costo de venta pendiente por centro (Top 20)</h3>
+      ${chartImages['chartCostoCentro'] ? `<img src="${chartImages['chartCostoCentro']}" width="100%" alt="Costo por centro">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
+    </td>
+  </tr>
+</table>
+
+<!-- GRÁFICAS: PLAZO POR TIPO DE TRANSACCIÓN -->
+<h2>&#9632; Plazo de Entrega por Centro y Tipo de Transacción</h2>
+<table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
+  <tr>
+    <td width="50%" style="vertical-align:top;padding:12px;">
+      <h3>KUMO ENTREGAS — Plazo por centro (Top 15)</h3>
+      ${chartImages['chartPlazoKumo'] ? `<img src="${chartImages['chartPlazoKumo']}" width="100%" alt="KUMO Plazo">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
+    </td>
+    <td width="50%" style="vertical-align:top;padding:12px;border-left:1px solid #E0E0E0;">
+      <h3>ZVA05VTAS — Plazo por centro (Top 15)</h3>
+      ${chartImages['chartPlazoVtas'] ? `<img src="${chartImages['chartPlazoVtas']}" width="100%" alt="VTAS Plazo">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
+    </td>
+  </tr>
+</table>
+
+<!-- GRÁFICAS: COSTO POR TRANSACCIÓN Y DISTRIBUCIÓN -->
+<h2>&#9632; Costo de Venta por Tipo de Transacción</h2>
+<table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
+  <tr>
+    <td width="60%" style="vertical-align:top;padding:12px;">
+      <h3>Costo por centro: KUMO ENTREGAS vs ZVA05VTAS</h3>
+      ${chartImages['chartCostoTx'] ? `<img src="${chartImages['chartCostoTx']}" width="100%" alt="Costo por transaccion">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
+    </td>
+    <td width="40%" style="vertical-align:top;padding:12px;border-left:1px solid #E0E0E0;">
+      <h3>Distribución por tipo de transacción</h3>
+      ${chartImages['chartDonut'] ? `<img src="${chartImages['chartDonut']}" width="100%" alt="Distribución transacción">` : ''}
+      <h3 style="margin-top:12px;">Pedidos por organización de ventas</h3>
+      ${chartImages['chartOrgBar'] ? `<img src="${chartImages['chartOrgBar']}" width="100%" alt="Pedidos por org">` : ''}
+    </td>
+  </tr>
+</table>
+
+<!-- TABLA: PLAZO POR CENTRO -->
+<h2>&#9632; Tabla Detalle — Plazo de Entrega por Centro</h2>
+<div style="overflow:auto;">
+${plazoTableWord}
+</div>
+
+<!-- TOP SUCURSALES -->
+<h2>&#9632; Top 15 Sucursales por Costo de Venta Pendiente</h2>
+<div style="overflow:auto;">
+${sucTableWord}
+</div>
+
+<!-- COBERTURA OC / TRASPASOS -->
+<h2>&#9632; Cobertura de Abasto — OC y Traspasos Activos por Centro</h2>
+<p style="font-size:9pt;color:#555;margin-bottom:8px;">Por Centro + Código: valor de OC/Traspaso único por código (sin sumatoria de renglones repetidos). % cobertura = (OC+Traspaso) / Cantidad Pendiente total del código.</p>
+<div style="overflow:auto;">
+${cobTableWord || '<p style="color:#aaa;font-size:9pt;">Sin datos de OC/Traspaso detectados en el archivo.</p>'}
+</div>
+
+<!-- ACUERDOS Y COMPROMISOS -->
+<h2>&#9632; Acuerdos y Compromisos por Centro</h2>
+${acuerdosHtml}
+
+</div>
+
+<!-- PIE DE INFORME -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1F3864;margin-top:30px;">
+  <tr>
+    <td style="padding:12px 24px;color:#BDC3C7;font-size:9pt;text-align:center;font-family:Calibri,Arial,sans-serif;">
+      Generado automáticamente por Dashboard Picking Pendiente GK &nbsp;·&nbsp; ${dateStr} &nbsp;·&nbsp; Francisco Javier Cerezo Ramos
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
+}
+
+// Helper: Convert an existing <table> DOM element to a Word-styled HTML table
+function buildWordTable(tableEl, rowColors) {
+  const headerBg = '#1F3864';
+  const headerColor = '#fff';
+  const altRow1 = rowColors[0] || '#EBF5FB';
+  const altRow2 = rowColors[1] || '#fff';
+
+  let html = `<table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:9pt;border:1px solid #BDC3C7;">`;
+  const rows = tableEl.querySelectorAll('tr');
+  rows.forEach((row, ri) => {
+    const isHeader = row.closest('thead') !== null || ri === 0;
+    const bg = isHeader ? headerBg : (ri % 2 === 1 ? altRow1 : altRow2);
+    const textColor = isHeader ? headerColor : '#333';
+    const fontWeight = isHeader ? 'bold' : 'normal';
+    html += `<tr>`;
+    const cells = row.querySelectorAll('th, td');
+    cells.forEach(cell => {
+      const align = cell.classList.contains('num') ? 'right' : (cell.classList.contains('th-compact') ? 'center' : 'left');
+      // Strip pill badges — extract only text
+      let cellText = cell.textContent.trim().replace(/\s+/g,' ');
+      html += `<td style="background:${bg};color:${textColor};padding:6px 8px;border:1px solid #BDC3C7;text-align:${align};font-weight:${fontWeight};">${cellText}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  return html;
+}
+
+function buildReportHtml() {
+  // Capture all chart images with dark labels on white background (visible in Word/Outlook)
+  const chartImages = captureChartsForExport();
+
+  // Capture table HTML (plazo)
+  const plazoTableHtml = document.getElementById('plazo-table').innerHTML;
+  const sucursalesTableHtml = document.getElementById('top-sucursales-table').innerHTML;
+  const coberturaTableHtml = document.getElementById('cobertura-oc-table').innerHTML;
+
+  // KPI text
+  const kpiLines = [];
+  document.getElementById('global-kpis').querySelectorAll('.kpi-card').forEach(card => {
+    kpiLines.push({
+      label: card.querySelector('.kpi-label')?.textContent.trim() || '',
+      val: card.querySelector('.kpi-val')?.textContent.trim() || '',
+      sub: card.querySelector('.kpi-sub')?.textContent.trim() || '',
+      color: card.classList.contains('blue') ? '#38bdf8' : card.classList.contains('green') ? '#4ade80' : card.classList.contains('purple') ? '#a78bfa' : '#f97316'
+    });
+  });
+
+  // Org cards
+  const orgCardsHtml = document.getElementById('org-grid').innerHTML;
+
+  // Acuerdos
+  const acuerdosHtml = document.getElementById('acuerdos-grid').innerHTML;
+
+  const org = document.getElementById('filter-org').value || 'Todas';
+  const centro = document.getElementById('filter-centro').value || 'Todos';
+  const dateStr = new Date().toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Picking Pendiente GK — ${dateStr}</title>
+<style>
+  :root {
+    --bg:#0f1117;--bg2:#181b24;--bg3:#1e2130;
+    --accent:#f97316;--accent2:#fb923c;--accent3:#38bdf8;
+    --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+    --border:#2d3555;--kumo:#38bdf8;--vtas:#a78bfa;
+    --danger:#f87171;--success:#4ade80;--warn:#fbbf24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:0;}
+  .report-header{background:var(--bg2);border-bottom:2px solid var(--accent);padding:24px 36px;display:flex;justify-content:space-between;align-items:center;}
+  .logo{width:48px;height:48px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff;}
+  .report-header h1{font-size:22px;font-weight:800;}
+  .report-header p{font-size:12px;color:var(--text2);}
+  .filter-badge{background:var(--bg3);border:1px solid var(--border);padding:8px 16px;border-radius:8px;font-size:12px;color:var(--text2);text-align:right;}
+  .content{padding:28px 36px;max-width:1400px;margin:0 auto;}
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin:32px 0 14px;display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px;}
+  .kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;}
+  .kpi-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;}
+  .kpi-val{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+  .kpi-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+  .org-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .org-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+  .org-card h4{font-size:13px;font-weight:700;color:var(--accent3);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;}
+  .org-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0;}
+  .org-row .label{color:var(--text2);}
+  .org-row .val{font-weight:600;}
+  .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;}
+  .chart-card h3{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px;}
+  .chart-card img{width:100%;height:auto;border-radius:4px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  thead tr{background:var(--bg3);}
+  thead th{padding:7px 5px;text-align:left;font-size:9px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);white-space:normal;word-break:break-word;line-height:1.2;vertical-align:bottom;}
+  th.th-compact{text-align:center;max-width:68px;}
+  tbody tr{border-bottom:1px solid var(--border);}
+  tbody td{padding:7px 5px;color:var(--text);}
+  td.num{text-align:right;}
+  td.muted{color:var(--text2);}
+  .pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;}
+  .pill.alto{background:rgba(248,113,113,0.15);color:#f87171;}
+  .pill.medio{background:rgba(251,191,36,0.15);color:#fbbf24;}
+  .pill.bajo{background:rgba(74,222,128,0.15);color:#4ade80;}
+  .acuerdos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .acuerdo-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .acuerdo-header{background:var(--bg3);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .centro-name{font-size:14px;font-weight:700;color:var(--accent3);}
+  .centro-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+  .acuerdo-body{padding:12px 14px;}
+  .acuerdo-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+  .mini-kpi{background:var(--bg3);border-radius:5px;padding:6px 8px;}
+  .mk-label{font-size:9px;color:var(--text3);text-transform:uppercase;}
+  .mk-val{font-size:14px;font-weight:700;}
+  .acuerdo-list{list-style:none;padding:0;}
+  .acuerdo-list li{display:flex;gap:6px;padding:4px 0;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);}
+  .acuerdo-list li:last-child{border-bottom:none;}
+  .acuerdo-list li::before{content:'▸';color:var(--accent);flex-shrink:0;}
+  .report-footer{background:var(--bg2);border-top:1px solid var(--border);padding:14px 36px;text-align:center;font-size:11px;color:var(--text3);margin-top:40px;}
+  @media print{
+    body{background:#fff;color:#000;}
+    .charts-2col{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="report-header">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="logo">GK</div>
+    <div>
+      <h1>Reporte Picking Pendiente</h1>
+      <p>Análisis operativo y comercial · VA05 · Francisco Javier Cerezo Ramos</p>
+    </div>
+  </div>
+  <div class="filter-badge">
+    <div style="font-weight:700;color:var(--text);font-size:13px;">${dateStr}</div>
+    <div style="margin-top:4px;">Org. Ventas: <strong style="color:var(--accent)">${org}</strong></div>
+    <div>Centro: <strong style="color:var(--accent)">${centro}</strong></div>
+    ${CURRENT_FILENAME ? `<div style="margin-top:2px;">Archivo: ${CURRENT_FILENAME}</div>` : ''}
+  </div>
+</div>
+
+<div class="content">
+
+<div class="section-title">Indicadores Globales</div>
+<div class="kpi-grid">
+  ${kpiLines.map(k => `<div class="kpi-card" style="--acc:${k.color}"><div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${k.color};border-radius:0"></div><div class="kpi-label">${k.label}</div><div class="kpi-val">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`).join('')}
+</div>
+
+<div class="section-title">Por Organización de Ventas</div>
+<div class="org-grid">${orgCardsHtml}</div>
+
+<div class="section-title">Picking Pendiente por Centro — Pedidos Únicos (Top 20)</div>
+<div class="charts-2col">
+  <div class="chart-card">
+    <h3>Pedidos únicos pendientes por centro (Top 20)</h3>
+    ${chartImages['chartPedidosCentro'] ? `<img src="${chartImages['chartPedidosCentro']}" alt="Pedidos por centro">` : '<p style="color:var(--text3)">Gráfica no disponible</p>'}
+  </div>
+  <div class="chart-card">
+    <h3>Costo de venta pendiente por centro (Top 20)</h3>
+    ${chartImages['chartCostoCentro'] ? `<img src="${chartImages['chartCostoCentro']}" alt="Costo por centro">` : '<p style="color:var(--text3)">Gráfica no disponible</p>'}
+  </div>
+</div>
+
+<div class="section-title">Plazo de Entrega por Centro y Tipo de Transacción</div>
+<div class="charts-2col">
+  <div class="chart-card">
+    <h3>KUMO ENTREGAS — Plazo por centro (Top 15)</h3>
+    ${chartImages['chartPlazoKumo'] ? `<img src="${chartImages['chartPlazoKumo']}" alt="KUMO por centro">` : '<p style="color:var(--text3)">Gráfica no disponible</p>'}
+  </div>
+  <div class="chart-card">
+    <h3>ZVA05VTAS — Plazo por centro (Top 15)</h3>
+    ${chartImages['chartPlazoVtas'] ? `<img src="${chartImages['chartPlazoVtas']}" alt="VTAS por centro">` : '<p style="color:var(--text3)">Gráfica no disponible</p>'}
+  </div>
+</div>
+
+<div class="section-title">Costo de Venta por Tipo de Transacción</div>
+<div class="charts-2col">
+  <div class="chart-card">
+    <h3>Costo por centro (KUMO vs ZVA05VTAS)</h3>
+    ${chartImages['chartCostoTx'] ? `<img src="${chartImages['chartCostoTx']}" alt="Costo por transaccion">` : '<p style="color:var(--text3)">Gráfica no disponible</p>'}
+  </div>
+  <div class="chart-card">
+    <h3>Distribución por transacción</h3>
+    ${chartImages['chartDonut'] ? `<img src="${chartImages['chartDonut']}" alt="Donut" style="max-height:220px;width:auto;display:block;margin:0 auto;">` : ''}
+    <h3 style="margin-top:10px;">Pedidos por organización</h3>
+    ${chartImages['chartOrgBar'] ? `<img src="${chartImages['chartOrgBar']}" alt="Org bar">` : ''}
+  </div>
+</div>
+
+<div class="section-title">Tabla Detalle — Plazo de Entrega por Centro</div>
+<div class="chart-card">${plazoTableHtml}</div>
+
+<div class="section-title">Top 15 Sucursales por Costo de Venta Pendiente</div>
+<div class="chart-card">${sucursalesTableHtml}</div>
+
+<div class="section-title">Cobertura de Abasto — OC y Traspasos Activos por Centro</div>
+<div class="chart-card">${coberturaTableHtml}</div>
+
+<div class="section-title">Acuerdos y Compromisos por Centro</div>
+<div class="acuerdos-grid">${acuerdosHtml}</div>
+
+</div>
+
+<div class="report-footer">
+  Generado automáticamente por Dashboard Picking Pendiente GK · ${dateStr} · Francisco Javier Cerezo Ramos
+</div>
+</body>
+</html>`;
+}
+
+// ===== FILE HANDLING =====
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file) return;
+  CURRENT_FILENAME = file.name;
+  document.getElementById('loading').style.display = 'flex';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      RAW = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      FILTERED = [...RAW];
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('upload-section').style.display = 'none';
+      document.getElementById('top-bar').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('file-label').textContent = file.name;
+      document.getElementById('badge-date').textContent = 'Datos cargados: ' + new Date().toLocaleDateString('es-MX');
+      populateFilters();
+      renderAll();
+    } catch(err) {
+      document.getElementById('loading').style.display = 'none';
+      alert('Error al procesar el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function col(row, name) {
+  const keys = Object.keys(row);
+  const k = keys.find(k => k.trim() === name.trim());
+  return k ? (row[k] ?? '') : '';
+}
+
+function populateFilters() {
+  const orgs = [...new Set(RAW.map(r => col(r,'Organizacion de Ventas')))].filter(Boolean).sort();
+  const centros = [...new Set(RAW.map(r => col(r,'Centro')))].filter(Boolean).sort();
+  const oSelect = document.getElementById('filter-org');
+  const cSelect = document.getElementById('filter-centro');
+  orgs.forEach(o => { const opt = new Option(o, o); oSelect.appendChild(opt); });
+  centros.forEach(c => { const opt = new Option(c, c); cSelect.appendChild(opt); });
+}
+
+function applyFilters() {
+  const org = document.getElementById('filter-org').value;
+  const centro = document.getElementById('filter-centro').value;
+  FILTERED = RAW.filter(r =>
+    (!org || col(r,'Organizacion de Ventas') === org) &&
+    (!centro || col(r,'Centro') === centro)
+  );
+  renderAll();
+}
+
+function resetFilters() {
+  document.getElementById('filter-org').value = '';
+  document.getElementById('filter-centro').value = '';
+  FILTERED = [...RAW];
+  renderAll();
+}
+
+// ===== AGGREGATION HELPERS =====
+function groupBy(data, key, agg) {
+  const map = {};
+  data.forEach(r => {
+    const k = col(r, key) || '(Sin dato)';
+    if (!map[k]) map[k] = [];
+    map[k].push(r);
+  });
+  const result = {};
+  Object.keys(map).forEach(k => { result[k] = agg(map[k]); });
+  return result;
+}
+
+function sumField(rows, field) {
+  return rows.reduce((s, r) => s + (parseFloat(col(r, field)) || 0), 0);
+}
+
+function countDistinct(rows, field) {
+  return new Set(rows.map(r => col(r, field))).size;
+}
+
+function fmt(n) { return new Intl.NumberFormat('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n)); }
+function fmtM(n) { return '$' + (n >= 1e6 ? (n/1e6).toFixed(2) + 'M' : fmt(n)); }
+function fmtK(n) { return n >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(1) + 'K' : '$' + Math.round(n); }
+
+// ===== RENDER ALL =====
+function renderAll() {
+  renderGlobalKPIs();
+  renderOrgCards();
+  renderChartPedidosCentro();
+  renderChartCostoCentro();
+  renderChartPlazo();
+  renderChartCostoTx();
+  renderChartDonut();
+  renderChartOrgBar();
+  renderPlazoTable();
+  renderTopSucursales();
+  renderCoberturaOC();
+  renderAcuerdos();
+}
+
+// ===== GLOBAL KPIs =====
+function renderGlobalKPIs() {
+  const totalPedidos = countDistinct(FILTERED, 'Numero de Pedido');
+  const totalRenglones = FILTERED.length;
+  const totalCosto = sumField(FILTERED, 'Costo de Venta Contable Pendiente');
+  const totalCantidad = sumField(FILTERED, 'Cantidad Pendiente');
+  const centros = new Set(FILTERED.map(r => col(r,'Centro'))).size;
+  const kumo = FILTERED.filter(r => col(r,'Transaccion') === 'KUMO ENTREGAS').length;
+  const vtas = FILTERED.filter(r => col(r,'Transaccion') === 'ZVA05VTAS').length;
+
+  document.getElementById('global-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Pedidos únicos</div><div class="kpi-val">${fmt(totalPedidos)}</div><div class="kpi-sub">sin duplicados</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">Renglones totales</div><div class="kpi-val">${fmt(totalRenglones)}</div><div class="kpi-sub">picking pendiente</div></div>
+    <div class="kpi-card"><div class="kpi-label">Costo venta pendiente</div><div class="kpi-val" style="font-size:20px">${fmtM(totalCosto)}</div><div class="kpi-sub">valor en tránsito</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Cantidad pendiente</div><div class="kpi-val">${fmt(totalCantidad)}</div><div class="kpi-sub">unidades</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Centros activos</div><div class="kpi-val">${centros}</div><div class="kpi-sub">sucursales</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">KUMO ENTREGAS</div><div class="kpi-val">${fmt(kumo)}</div><div class="kpi-sub">renglones</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">ZVA05VTAS</div><div class="kpi-val">${fmt(vtas)}</div><div class="kpi-sub">renglones</div></div>
+  `;
+}
+
+// ===== ORG VENTAS =====
+function renderOrgCards() {
+  const orgs = groupBy(FILTERED, 'Organizacion de Ventas', rows => ({
+    pedidos: countDistinct(rows, 'Numero de Pedido'),
+    renglones: rows.length,
+    costo: sumField(rows, 'Costo de Venta Contable Pendiente'),
+    centros: new Set(rows.map(r => col(r,'Centro'))).size,
+    kumo: rows.filter(r => col(r,'Transaccion') === 'KUMO ENTREGAS').length,
+    vtas: rows.filter(r => col(r,'Transaccion') === 'ZVA05VTAS').length
+  }));
+  const html = Object.entries(orgs).sort((a,b) => b[1].costo - a[1].costo).map(([org, d]) => `
+    <div class="org-card">
+      <h4>${org}</h4>
+      <div class="org-row"><span class="label">Pedidos únicos</span><span class="val">${fmt(d.pedidos)}</span></div>
+      <div class="org-row"><span class="label">Renglones</span><span class="val">${fmt(d.renglones)}</span></div>
+      <div class="org-row"><span class="label">Costo pendiente</span><span class="val" style="color:var(--accent)">${fmtM(d.costo)}</span></div>
+      <div class="org-row"><span class="label">Centros</span><span class="val">${d.centros}</span></div>
+      <div class="org-row"><span class="label">KUMO / VTAS</span><span class="val" style="font-size:11px"><span style="color:var(--kumo)">${fmt(d.kumo)}</span> / <span style="color:var(--vtas)">${fmt(d.vtas)}</span></span></div>
+    </div>
+  `).join('');
+  document.getElementById('org-grid').innerHTML = html;
+}
+
+// ===== HELPERS para charts =====
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+const PLAZO_COLORS = {
+  'ENTREGA INMEDIATA': '#4ade80',
+  'ENVÍO A DOMICILIO': '#38bdf8',
+  'OCURRE': '#a78bfa',
+  'PIDE Y RECOGE': '#fbbf24',
+  'APARTADOS': '#fb923c',
+  'SOBREPEDIDO': '#f87171',
+  'DIRECTO A OBRA': '#34d399',
+  'CTE RECO EN OTRA SUC': '#60a5fa',
+  'MERCANCIA RESGUARDO': '#e879f9',
+  'CONTRA ENTREGA (CóD)': '#f472b6',
+  'ENVIO POR PAQUETERIA': '#94a3b8',
+  'default': '#64748b'
+};
+function plazoColor(p) { return PLAZO_COLORS[p] || PLAZO_COLORS['default']; }
+
+// ===== CHART: Pedidos por centro =====
+function renderChartPedidosCentro() {
+  destroyChart('pedidosCentro');
+  const byC = groupBy(FILTERED, 'Centro', rows => countDistinct(rows, 'Numero de Pedido'));
+  const sorted = Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const labels = sorted.map(x=>x[0]);
+  const data = sorted.map(x=>x[1]);
+  charts['pedidosCentro'] = new Chart(document.getElementById('chartPedidosCentro'), {
+    type: 'bar', data: {
+      labels,
+      datasets: [{ label: 'Pedidos únicos', data, backgroundColor: labels.map((_,i) => `hsl(${220 + i*7},70%,${55+i%3*5}%)`), borderRadius: 4 }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.raw) + ' pedidos' } } },
+      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } } }
+    }
+  });
+}
+
+// ===== CHART: Costo por centro =====
+function renderChartCostoCentro() {
+  destroyChart('costoCentro');
+  const byC = groupBy(FILTERED, 'Centro', rows => sumField(rows, 'Costo de Venta Contable Pendiente'));
+  const sorted = Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  charts['costoCentro'] = new Chart(document.getElementById('chartCostoCentro'), {
+    type: 'bar', data: {
+      labels: sorted.map(x=>x[0]),
+      datasets: [{ label: 'Costo pendiente', data: sorted.map(x=>x[1]), backgroundColor: sorted.map((_,i)=>`hsl(${25+i*4},85%,${50+i%3*5}%)`), borderRadius: 4 }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmtM(c.raw) } } },
+      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } } }
+    }
+  });
+}
+
+// ===== CHART: Plazo por transaccion =====
+function renderChartPlazo() {
+  ['chartPlazoKumo','chartPlazoVtas'].forEach(id => destroyChart(id));
+
+  ['KUMO ENTREGAS','ZVA05VTAS'].forEach((tx, idx) => {
+    const subset = FILTERED.filter(r => col(r,'Transaccion') === tx);
+    const centroMap = {};
+    subset.forEach(r => {
+      const c = col(r,'Centro');
+      const p = col(r,'Plazo de Entrega') || 'Sin dato';
+      const ped = col(r,'Numero de Pedido');
+      if (!centroMap[c]) centroMap[c] = {};
+      if (!centroMap[c][p]) centroMap[c][p] = new Set();
+      centroMap[c][p].add(ped);
+    });
+    const centroTotals = Object.entries(centroMap).map(([c,pm]) => [c, Object.values(pm).reduce((s,set)=>s+set.size,0)]);
+    const top15 = centroTotals.sort((a,b)=>b[1]-a[1]).slice(0,15).map(x=>x[0]);
+    const allPlazos = [...new Set(subset.map(r => col(r,'Plazo de Entrega') || 'Sin dato'))].filter(Boolean);
+
+    const datasets = allPlazos.map(p => ({
+      label: p,
+      data: top15.map(c => centroMap[c] && centroMap[c][p] ? centroMap[c][p].size : 0),
+      backgroundColor: plazoColor(p),
+      borderRadius: 2
+    }));
+
+    const canvasId = idx === 0 ? 'chartPlazoKumo' : 'chartPlazoVtas';
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type: 'bar', data: { labels: top15, datasets },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 8 } },
+          tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) + ' ped.' } }
+        },
+        scales: {
+          x: { stacked: true, ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } },
+          y: { stacked: true, ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  });
+}
+
+// ===== CHART: Costo por transaccion =====
+function renderChartCostoTx() {
+  destroyChart('costoTx');
+  const byC = {};
+  FILTERED.forEach(r => {
+    const c = col(r,'Centro');
+    const tx = col(r,'Transaccion');
+    const v = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
+    if (!byC[c]) byC[c] = { 'KUMO ENTREGAS': 0, 'ZVA05VTAS': 0 };
+    byC[c][tx] = (byC[c][tx] || 0) + v;
+  });
+  const sorted = Object.entries(byC).sort((a,b)=>(b[1]['KUMO ENTREGAS']+b[1]['ZVA05VTAS'])-(a[1]['KUMO ENTREGAS']+a[1]['ZVA05VTAS'])).slice(0,20);
+  const labels = sorted.map(x=>x[0]);
+  charts['costoTx'] = new Chart(document.getElementById('chartCostoTx'), {
+    type: 'bar', data: { labels, datasets: [
+      { label: 'KUMO ENTREGAS', data: sorted.map(x=>x[1]['KUMO ENTREGAS']), backgroundColor: '#38bdf8', borderRadius: 3 },
+      { label: 'ZVA05VTAS', data: sorted.map(x=>x[1]['ZVA05VTAS']), backgroundColor: '#a78bfa', borderRadius: 3 }
+    ]},
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmtM(c.raw) } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } },
+        y: { stacked: true, ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ===== CHART: Donut transaccion =====
+function renderChartDonut() {
+  destroyChart('donut');
+  const kumo = FILTERED.filter(r => col(r,'Transaccion') === 'KUMO ENTREGAS').length;
+  const vtas = FILTERED.filter(r => col(r,'Transaccion') === 'ZVA05VTAS').length;
+  charts['donut'] = new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut', data: {
+      labels: ['KUMO ENTREGAS','ZVA05VTAS'],
+      datasets: [{ data: [kumo, vtas], backgroundColor: ['#38bdf8','#a78bfa'], borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + fmt(c.raw) + ' (' + (c.raw/(kumo+vtas)*100).toFixed(1) + '%)' } }
+      }
+    }
+  });
+}
+
+// ===== CHART: Org bar =====
+function renderChartOrgBar() {
+  destroyChart('orgBar');
+  const byOrg = groupBy(FILTERED, 'Organizacion de Ventas', rows => countDistinct(rows, 'Numero de Pedido'));
+  const sorted = Object.entries(byOrg).sort((a,b)=>b[1]-a[1]);
+  charts['orgBar'] = new Chart(document.getElementById('chartOrgBar'), {
+    type: 'bar', data: {
+      labels: sorted.map(x=>x[0]),
+      datasets: [{ data: sorted.map(x=>x[1]), backgroundColor: ['#f97316','#38bdf8','#a78bfa','#4ade80','#fbbf24'], borderRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.raw) + ' pedidos' } } },
+      scales: { x: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } } }
+    }
+  });
+}
+
+// ===== TABLE: Plazo por centro — COMPACTA sin scroll horizontal =====
+function renderPlazoTable() {
+  const txFilter = document.getElementById('filter-tx-table').value;
+  const subset = txFilter ? FILTERED.filter(r => col(r,'Transaccion') === txFilter) : FILTERED;
+
+  const centroMap = {};
+  subset.forEach(r => {
+    const c = col(r,'Centro');
+    const p = col(r,'Plazo de Entrega') || 'Sin dato';
+    const ped = col(r,'Numero de Pedido');
+    const tx = col(r,'Transaccion');
+    if (!centroMap[c]) centroMap[c] = { plazos: {}, total: new Set(), txs: new Set() };
+    if (!centroMap[c].plazos[p]) centroMap[c].plazos[p] = new Set();
+    centroMap[c].plazos[p].add(ped);
+    centroMap[c].total.add(ped);
+    centroMap[c].txs.add(tx);
+  });
+
+  const allPlazos = [...new Set(subset.map(r => col(r,'Plazo de Entrega') || 'Sin dato'))].sort();
+  const rows = Object.entries(centroMap).sort((a,b) => b[1].total.size - a[1].total.size);
+
+  // Abreviaciones compactas para encabezados de columna
+  const plazoAbrev = {
+    'ENTREGA INMEDIATA': 'ENTREGA\nINMED.',
+    'ENVÍO A DOMICILIO': 'ENV.\nDOMICILIO',
+    'ENVIO POR PAQUETERIA': 'ENV.\nPAQUETERÍA',
+    'OCURRE': 'OCURRE',
+    'PIDE Y RECOGE': 'PIDE Y\nRECOGE',
+    'APARTADOS': 'APART.',
+    'SOBREPEDIDO': 'SOBRE-\nPEDIDO',
+    'DIRECTO A OBRA': 'DIR.\nOBRA',
+    'CTE RECO EN OTRA SUC': 'CTE RECO\nOTRA SUC',
+    'MERCANCIA RESGUARDO': 'MERC.\nRESG.',
+    'CONTRA ENTREGA (CóD)': 'CONTRA\nENTREGA',
+    'Sin dato': 'SIN\nDATO'
+  };
+
+  function abrev(p) {
+    if (plazoAbrev[p]) return plazoAbrev[p];
+    // Auto-abbreviate: break at spaces, max 2 words per line
+    const words = p.split(' ');
+    if (words.length <= 2) return p;
+    const mid = Math.ceil(words.length / 2);
+    return words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
+  }
+
+  let html = `<table style="table-layout:fixed;width:100%;"><thead><tr>
+    <th class="th-fixed" style="width:110px;min-width:90px;">Centro</th>
+    <th class="th-fixed" style="width:72px;text-align:center;">Total<br>Pedidos</th>
+    <th class="th-fixed" style="width:80px;">Trans.</th>`;
+
+  allPlazos.forEach(p => {
+    const label = abrev(p).replace(/\n/g, '<br>');
+    html += `<th class="th-compact" style="background:${plazoColor(p)}18;border-top:2px solid ${plazoColor(p)};">${label}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  rows.forEach(([centro, d]) => {
+    const total = d.total.size;
+    const badge = total > 200 ? 'alto' : total > 80 ? 'medio' : 'bajo';
+    const txsShort = [...d.txs].map(t => t === 'KUMO ENTREGAS' ? '🔵K' : '🟣V').join(' ');
+    html += `<tr>
+      <td style="font-weight:600;color:var(--accent3);font-size:11px;word-break:break-word;">${centro}</td>
+      <td style="text-align:center;"><span class="pill ${badge}">${fmt(total)}</span></td>
+      <td class="muted" style="font-size:10px;">${txsShort}</td>`;
+    allPlazos.forEach(p => {
+      const v = d.plazos[p] ? d.plazos[p].size : 0;
+      const color = v > 0 ? plazoColor(p) : 'var(--text3)';
+      html += `<td style="text-align:center;font-size:11px;font-weight:${v>0?'600':'400'};color:${color};">${v > 0 ? fmt(v) : '—'}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById('plazo-table').innerHTML = html;
+}
+
+// ===== TOP SUCURSALES =====
+function renderTopSucursales() {
+  const byC = groupBy(FILTERED, 'Centro', rows => ({
+    pedidos: countDistinct(rows, 'Numero de Pedido'),
+    renglones: rows.length,
+    costo: sumField(rows, 'Costo de Venta Contable Pendiente'),
+    cantidad: sumField(rows, 'Cantidad Pendiente'),
+    kumo: rows.filter(r=>col(r,'Transaccion')==='KUMO ENTREGAS').length,
+    vtas: rows.filter(r=>col(r,'Transaccion')==='ZVA05VTAS').length,
+    plazos: [...new Set(rows.map(r=>col(r,'Plazo de Entrega')).filter(Boolean))].join(', ')
+  }));
+
+  const sorted = Object.entries(byC).sort((a,b)=>b[1].costo-a[1].costo).slice(0,15);
+  const maxCosto = sorted[0]?.[1]?.costo || 1;
+
+  let html = `<table><thead><tr>
+    <th>#</th><th>Centro</th><th class="num">Pedidos<br>únicos</th><th class="num">Rengl.</th>
+    <th class="num">Costo<br>Pendiente</th><th class="num">Cant.</th>
+    <th>KUMO /<br>VTAS</th><th>% del total</th>
+  </tr></thead><tbody>`;
+
+  sorted.forEach(([centro, d], i) => {
+    const pct = (d.costo / maxCosto * 100).toFixed(1);
+    const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1)+'°';
+    html += `<tr>
+      <td style="font-size:16px;text-align:center">${rank}</td>
+      <td style="font-weight:700;color:var(--accent3)">${centro}</td>
+      <td class="num">${fmt(d.pedidos)}</td>
+      <td class="num">${fmt(d.renglones)}</td>
+      <td class="num" style="color:var(--accent);font-weight:600">${fmtM(d.costo)}</td>
+      <td class="num">${fmt(d.cantidad)}</td>
+      <td style="font-size:11px"><span style="color:var(--kumo)">${fmt(d.kumo)}</span> / <span style="color:var(--vtas)">${fmt(d.vtas)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;background:var(--border);height:6px;border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text2);min-width:36px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById('top-sucursales-table').innerHTML = html;
+}
+
+// ===== COBERTURA OC / TRASPASOS =====
+function renderCoberturaOC() {
+  const tipoFiltro = (document.getElementById('filter-cob-tipo')?.value) || 'all';
+  const viewFiltro = (document.getElementById('filter-cob-view')?.value) || 'all';
+
+  // Para cada combinación Centro+Código:
+  // - Cantidad Pendiente total = suma real de todos los renglones del código en ese centro
+  // - OC = valor único del código en ese centro (se toma el primero no vacío, ya que se repite)
+  // - Traspaso = igual que OC
+
+  const map = {}; // key: "centro||codigo"
+  FILTERED.forEach(r => {
+    const centro = col(r, 'Centro') || '(Sin centro)';
+    const codigo = col(r, 'Codigo') || col(r, 'Material') || col(r, 'Código') || col(r, 'Cod. Material') || col(r, 'Codigo Material') || '(Sin código)';
+    const cantPend = parseFloat(col(r, 'Cantidad Pendiente')) || 0;
+
+    // OC — buscar columna con nombre que contenga "OC" o "Orden de Compra"
+    let ocVal = '';
+    let traspVal = '';
+    const keys = Object.keys(r);
+    for (const k of keys) {
+      const kl = k.trim().toLowerCase();
+      if (!ocVal && (kl.includes('orden de compra') || kl === 'oc' || kl.includes('o.c.') || kl.startsWith('oc ') || kl === 'num oc' || kl === 'numero oc' || kl === 'cant oc' || kl === 'cantidad oc' || kl === 'qty oc')) {
+        ocVal = r[k];
+      }
+      if (!traspVal && (kl.includes('traspaso') || kl.includes('traslado') || kl === 'cant traspaso' || kl === 'cantidad traspaso' || kl === 'trsp' || kl === 'num traspaso' || kl === 'numero traspaso')) {
+        traspVal = r[k];
+      }
+    }
+
+    const ocNum = parseFloat(ocVal) || 0;
+    const traspNum = parseFloat(traspVal) || 0;
+    const key = centro + '||' + codigo;
+
+    if (!map[key]) {
+      map[key] = { centro, codigo, cantPend: 0, oc: 0, trasp: 0, ocRaw: '', traspRaw: '', renglones: 0 };
+    }
+    map[key].cantPend += cantPend;
+    map[key].renglones++;
+    // Valor único de OC/Traspaso por código: solo se asigna una vez (el primero no vacío)
+    if (map[key].oc === 0 && ocNum > 0) { map[key].oc = ocNum; map[key].ocRaw = ocVal; }
+    if (map[key].trasp === 0 && traspNum > 0) { map[key].trasp = traspNum; map[key].traspRaw = traspVal; }
+  });
+
+  // Detectar si hay columnas OC / Traspaso en los datos
+  const tieneOC = Object.values(map).some(d => d.oc > 0);
+  const tieneTrasp = Object.values(map).some(d => d.trasp > 0);
+
+  if (!tieneOC && !tieneTrasp) {
+    document.getElementById('cobertura-oc-table').innerHTML =
+      `<p style="color:var(--text2);font-size:12px;padding:12px 0;">
+        ⚠️ No se detectaron columnas de <strong>OC</strong> o <strong>Traspaso</strong> en el archivo cargado.<br>
+        Verifica que el Excel incluya columnas con esos nombres (ej: <em>Cantidad OC</em>, <em>Num Traspaso</em>, <em>Orden de Compra</em>, etc.).
+      </p>`;
+    return;
+  }
+
+  // Agrupar por centro para la tabla resumen
+  const byCentro = {};
+  Object.values(map).forEach(d => {
+    if (!byCentro[d.centro]) {
+      byCentro[d.centro] = { centro: d.centro, codigos: [], cantTotal: 0, ocTotal: 0, traspTotal: 0, cubTotal: 0 };
+    }
+    const cobertura = tipoFiltro === 'oc' ? d.oc : tipoFiltro === 'traspaso' ? d.trasp : (d.oc + d.trasp);
+    const pct = d.cantPend > 0 ? Math.min(100, (cobertura / d.cantPend) * 100) : 0;
+    byCentro[d.centro].codigos.push({ ...d, cobertura, pct });
+    byCentro[d.centro].cantTotal += d.cantPend;
+    byCentro[d.centro].ocTotal += d.oc;
+    byCentro[d.centro].traspTotal += d.trasp;
+  });
+
+  // Calcular métricas de cobertura por centro
+  const centroRows = Object.values(byCentro).map(c => {
+    const cobTotal = tipoFiltro === 'oc' ? c.ocTotal : tipoFiltro === 'traspaso' ? c.traspTotal : (c.ocTotal + c.traspTotal);
+    const pctGlobal = c.cantTotal > 0 ? Math.min(100, (cobTotal / c.cantTotal) * 100) : 0;
+    const codsConCob = c.codigos.filter(x => x.pct >= 100).length;
+    const codsSinCob = c.codigos.filter(x => x.pct === 0).length;
+    const codsParcial = c.codigos.filter(x => x.pct > 0 && x.pct < 100).length;
+    return { ...c, cobTotal, pctGlobal, codsConCob, codsSinCob, codsParcial, totalCods: c.codigos.length };
+  }).sort((a, b) => b.cantTotal - a.cantTotal);
+
+  // Filtrar según viewFiltro
+  const filtered = centroRows.filter(c => {
+    if (viewFiltro === 'full') return c.pctGlobal >= 100;
+    if (viewFiltro === 'partial') return c.pctGlobal > 0 && c.pctGlobal < 100;
+    if (viewFiltro === 'none') return c.pctGlobal === 0;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('cobertura-oc-table').innerHTML =
+      `<p style="color:var(--text2);font-size:12px;padding:12px 0;">Sin resultados para el filtro seleccionado.</p>`;
+    return;
+  }
+
+  const showOC = (tipoFiltro === 'all' || tipoFiltro === 'oc') && tieneOC;
+  const showTrasp = (tipoFiltro === 'all' || tipoFiltro === 'traspaso') && tieneTrasp;
+
+  let html = `<table>
+    <thead><tr>
+      <th>Centro</th>
+      <th class="num">Códigos<br>únicos</th>
+      <th class="num">Cant.<br>Pendiente</th>
+      ${showOC ? `<th class="num">Cant.<br>OC</th>` : ''}
+      ${showTrasp ? `<th class="num">Cant.<br>Traspaso</th>` : ''}
+      <th class="num">Cobertura<br>Total</th>
+      <th class="num">% Cobertura</th>
+      <th class="num" style="color:var(--success)">Cods.<br>100%</th>
+      <th class="num" style="color:var(--warn)">Cods.<br>Parcial</th>
+      <th class="num" style="color:var(--danger)">Cods.<br>Sin cob.</th>
+      <th style="min-width:120px;">Barra</th>
+    </tr></thead><tbody>`;
+
+  filtered.forEach(c => {
+    const pct = c.pctGlobal.toFixed(1);
+    const barColor = c.pctGlobal >= 100 ? 'var(--success)' : c.pctGlobal >= 50 ? 'var(--warn)' : 'var(--danger)';
+    const pctText = c.pctGlobal >= 100
+      ? `<span style="color:var(--success);font-weight:700">✔ ${pct}%</span>`
+      : c.pctGlobal > 0
+        ? `<span style="color:var(--warn);font-weight:700">${pct}%</span>`
+        : `<span style="color:var(--danger);font-weight:700">—&nbsp;0%</span>`;
+
+    html += `<tr>
+      <td style="font-weight:700;color:var(--accent3)">${c.centro}</td>
+      <td class="num">${fmt(c.totalCods)}</td>
+      <td class="num">${fmt(c.cantTotal)}</td>
+      ${showOC ? `<td class="num" style="color:var(--kumo)">${c.ocTotal > 0 ? fmt(c.ocTotal) : '—'}</td>` : ''}
+      ${showTrasp ? `<td class="num" style="color:var(--vtas)">${c.traspTotal > 0 ? fmt(c.traspTotal) : '—'}</td>` : ''}
+      <td class="num" style="font-weight:600">${fmt(c.cobTotal)}</td>
+      <td class="num">${pctText}</td>
+      <td class="num"><span style="color:var(--success);font-weight:600">${c.codsConCob}</span></td>
+      <td class="num"><span style="color:var(--warn);font-weight:600">${c.codsParcial > 0 ? c.codsParcial : '—'}</span></td>
+      <td class="num"><span style="color:var(--danger);font-weight:600">${c.codsSinCob > 0 ? c.codsSinCob : '—'}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="flex:1;background:var(--border);height:7px;border-radius:4px;overflow:hidden;min-width:80px;">
+            <div style="width:${Math.min(100,c.pctGlobal)}%;height:100%;background:${barColor};border-radius:4px;transition:width 0.4s;"></div>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('cobertura-oc-table').innerHTML = html;
+}
+
+// ===== ACUERDOS Y COMPROMISOS =====
+function renderAcuerdos() {
+  const byC = groupBy(FILTERED, 'Centro', rows => {
+    const pedidos = countDistinct(rows, 'Numero de Pedido');
+    const costo = sumField(rows, 'Costo de Venta Contable Pendiente');
+    const kumo = rows.filter(r=>col(r,'Transaccion')==='KUMO ENTREGAS').length;
+    const vtas = rows.filter(r=>col(r,'Transaccion')==='ZVA05VTAS').length;
+    const renglones = rows.length;
+    const plazos = {};
+    rows.forEach(r => { const p = col(r,'Plazo de Entrega')||'Sin dato'; plazos[p]=(plazos[p]||0)+1; });
+    const topPlazo = Object.entries(plazos).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+    const sobrepedidos = rows.filter(r=>col(r,'Plazo de Entrega')==='SOBREPEDIDO').length;
+    const apartados = rows.filter(r=>col(r,'Plazo de Entrega')==='APARTADOS').length;
+    const domicilio = rows.filter(r=>col(r,'Plazo de Entrega')==='ENVÍO A DOMICILIO').length;
+    const inmediata = rows.filter(r=>col(r,'Plazo de Entrega')==='ENTREGA INMEDIATA').length;
+    return { pedidos, costo, kumo, vtas, renglones, topPlazo, sobrepedidos, apartados, domicilio, inmediata };
+  });
+
+  const totalCosto = sumField(FILTERED, 'Costo de Venta Contable Pendiente');
+  const sorted = Object.entries(byC).sort((a,b)=>b[1].costo-a[1].costo);
+
+  function generateAcuerdos(centro, d) {
+    const acuerdos = [];
+    const pctCosto = (d.costo / totalCosto * 100).toFixed(1);
+
+    if (d.pedidos > 300) {
+      acuerdos.push(`Reunión urgente de seguimiento diario: ${fmt(d.pedidos)} pedidos únicos representa una carga crítica. Asignar coordinador de picking exclusivo.`);
+    } else if (d.pedidos > 100) {
+      acuerdos.push(`Revisión semanal de avance: ${fmt(d.pedidos)} pedidos pendientes. Establecer meta de reducción del 30% en 2 semanas.`);
+    }
+
+    if (d.costo > 5000000) {
+      acuerdos.push(`Prioridad ALTA de liberación: $${fmtM(d.costo)} (${pctCosto}% del total nacional). Involucrar a gerencia regional para destrabar pedidos de mayor valor.`);
+    } else if (d.costo > 1000000) {
+      acuerdos.push(`Monitoreo de costo pendiente de $${fmtM(d.costo)}: concentrar esfuerzo en los 10 pedidos de mayor valor unitario.`);
+    }
+
+    if (d.sobrepedidos > 5) {
+      acuerdos.push(`Depurar ${fmt(d.sobrepedidos)} renglones con plazo "SOBREPEDIDO": revisar disponibilidad real en inventario y cancelar o reprogramar los que no tienen fecha fija.`);
+    }
+
+    if (d.apartados > 5) {
+      acuerdos.push(`Revisar ${fmt(d.apartados)} renglones "APARTADOS": confirmar que el material esté físicamente separado en almacén y coordinar entrega inmediata.`);
+    }
+
+    if (d.domicilio > 30) {
+      acuerdos.push(`Optimizar rutas de envío a domicilio: ${fmt(d.domicilio)} renglones. coordinarse con logística para cumplir con los tiempos de 24 y 36 horas.`);
+    }
+
+    if (d.kumo > 0 && d.vtas > 0) {
+      const pctKumo = (d.kumo / d.renglones * 100).toFixed(0);
+      if (pctKumo > 65) {
+        acuerdos.push(`Alta concentración en KUMO ENTREGAS (${pctKumo}%): capacitar personal de mostrador en proceso de creación de pedidos directos (ZVA05) para agilizar picking desde el origen.`);
+      } else if (pctKumo < 30) {
+        acuerdos.push(`Baja adopción de KUMO ENTREGAS (${pctKumo}%): evaluar si el flujo logístico es adecuado; incrementar uso de KUMO para entregas recurrentes a clientes frecuentes.`);
+      }
+    }
+
+    if (d.inmediata > 20) {
+      acuerdos.push(`${fmt(d.inmediata)} renglones marcados como "ENTREGA INMEDIATA" siguen pendientes: revisar bloqueos de almacén (inventario, reservas) y liberar en las próximas 24h.`);
+    }
+
+    if (acuerdos.length < 2) {
+      acuerdos.push(`Mantener seguimiento quincenal del picking pendiente: volumen actual de ${fmt(d.pedidos)} pedidos es manejable, pero requiere disciplina operativa para no acumularse.`);
+    }
+
+    acuerdos.push(`Inventario sano: validar que todos los renglones tienen existencia disponible; los que no — generar OC o solicitar traspaso para abastecer en ≤5 días hábiles.`);
+    acuerdos.push(`Compromiso comercial: el equipo de ventas debe depurar pedidos con más de 60 días de antigüedad, ya sea re-confirmando con el cliente.`);
+
+    return acuerdos;
+  }
+
+  const html = sorted.map(([centro, d]) => {
+    const acuerdos = generateAcuerdos(centro, d);
+    const pct = (d.costo / totalCosto * 100).toFixed(1);
+    const urgencia = d.pedidos > 300 ? 'CRÍTICO' : d.pedidos > 100 ? 'ALTO' : d.pedidos > 30 ? 'MEDIO' : 'BAJO';
+    const urgColor = d.pedidos > 300 ? '#f87171' : d.pedidos > 100 ? '#fbbf24' : d.pedidos > 30 ? '#38bdf8' : '#4ade80';
+    return `
+    <div class="acuerdo-card">
+      <div class="acuerdo-header">
+        <span class="centro-name">${centro}</span>
+        <span class="centro-badge" style="color:${urgColor};background:${urgColor}22">${urgencia}</span>
+      </div>
+      <div class="acuerdo-body">
+        <div class="acuerdo-kpis">
+          <div class="mini-kpi"><div class="mk-label">Pedidos</div><div class="mk-val">${fmt(d.pedidos)}</div></div>
+          <div class="mini-kpi"><div class="mk-label">Costo</div><div class="mk-val" style="font-size:13px">${fmtM(d.costo)}</div></div>
+          <div class="mini-kpi"><div class="mk-label">% Nacional</div><div class="mk-val" style="color:var(--accent)">${pct}%</div></div>
+          <div class="mini-kpi"><div class="mk-label">Renglones</div><div class="mk-val">${fmt(d.renglones)}</div></div>
+        </div>
+        <ul class="acuerdo-list">
+          ${acuerdos.map(a=>`<li>${a}</li>`).join('')}
+        </ul>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('acuerdos-grid').innerHTML = html;
+}
+</script>
+</body>
+</html>
