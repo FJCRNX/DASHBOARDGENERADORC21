@@ -170,11 +170,85 @@
   .btn-modal-ok { background: var(--accent); color: #fff; border: none; padding: 9px 22px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
   .btn-modal-ok:hover { background: var(--accent2); }
   .modal-selall { font-size: 11px; color: var(--accent3); cursor: pointer; text-decoration: underline; margin-bottom: 10px; display: inline-block; }
+
+  /* TABS */
+  .tabs-nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 0; }
+  .tab-btn { background: transparent; border: none; border-bottom: 3px solid transparent; padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
+  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* HISTORIAL CARGAS */
+  .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
+  .hist-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; transition: border-color 0.2s; }
+  .hist-card:hover { border-color: var(--border2); }
+  .hist-card-header { background: var(--bg3); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .hist-card-title { font-size: 13px; font-weight: 700; color: var(--accent3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .hist-card-date { font-size: 11px; color: var(--text3); }
+  .hist-card-body { padding: 12px 16px; }
+  .hist-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .hist-kpi { background: var(--bg3); border-radius: 6px; padding: 7px 10px; }
+  .hist-kpi .hk-l { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .hist-kpi .hk-v { font-size: 15px; font-weight: 700; color: var(--text); }
+  .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-hist-load { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-hist-load:hover { background: var(--accent2); }
+  .btn-hist-del { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-hist-del:hover { background: rgba(248,113,113,0.12); }
+  .btn-hist-compare { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-hist-compare:hover { background: rgba(56,189,248,0.1); }
+  .hist-empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .hist-empty .ei { font-size: 48px; margin-bottom: 12px; }
+
+  /* COMPARACION */
+  .comp-controls { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 20px; margin-bottom: 20px; }
+  .comp-controls h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 14px; }
+  .comp-selects { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; flex-wrap: wrap; }
+  @media (max-width: 1200px) { .comp-selects { grid-template-columns: 1fr 1fr 1fr; } }
+  .comp-selects select { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 7px; font-size: 12px; cursor: pointer; width: 100%; }
+  .comp-selects label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 5px; }
+  .btn-comp-run { background: var(--accent); color: #fff; border: none; padding: 9px 22px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; height: 38px; }
+  .btn-comp-run:hover { background: var(--accent2); }
+  .btn-comp-clear { background: transparent; color: var(--text2); border: 1px solid var(--border2); padding: 9px 16px; border-radius: 7px; font-size: 12px; cursor: pointer; height: 38px; }
+  .comp-delta-pos { color: var(--success); font-weight: 700; }
+  .comp-delta-neg { color: var(--danger); font-weight: 700; }
+  .comp-delta-neu { color: var(--text3); }
+  .comp-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .comp-kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; }
+  .comp-kpi-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .comp-kpi-vals { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .comp-kpi-a { font-size: 20px; font-weight: 700; color: var(--kumo); }
+  .comp-kpi-b { font-size: 20px; font-weight: 700; color: var(--vtas); }
+  .comp-kpi-arrow { font-size: 18px; }
+  .comp-kpi-delta { font-size: 12px; margin-top: 4px; }
+  .comp-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .comp-chart-row { grid-template-columns: 1fr; } .comp-selects { grid-template-columns: 1fr 1fr; } }
+  .comp-table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; margin-bottom: 20px; }
+  .comp-table-card h3 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+  .sucursal-report-btn { background: var(--accent); color: #fff; border: none; padding: 8px 18px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: auto; display: block; }
+  .sucursal-report-btn:hover { background: var(--accent2); }
+
+  /* MODAL CONFIRM ELIMINAR */
+  #modal-confirm { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 600; align-items: center; justify-content: center; }
+  #modal-confirm.open { display: flex; }
 </style>
 </head>
 <body>
 
 <div id="toast">✓ Copiado al portapapeles</div>
+
+<!-- MODAL CONFIRM ELIMINAR CARGA -->
+<div id="modal-confirm">
+  <div class="modal-box" style="max-width:420px;">
+    <h2>🗑️ Eliminar carga</h2>
+    <p id="modal-confirm-msg" style="margin-top:10px;color:var(--text);">¿Seguro que deseas eliminar esta carga? Esta acción no se puede deshacer.</p>
+    <div class="modal-actions" style="margin-top:22px;">
+      <button class="btn-modal-cancel" onclick="cerrarModalConfirm()">Cancelar</button>
+      <button class="btn-modal-ok" style="background:var(--danger);" onclick="confirmarEliminar()">🗑️ Eliminar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL SELECCIÓN DE SECCIONES PARA WORD -->
 <div id="modal-secciones">
@@ -191,8 +265,8 @@
       <div class="modal-sec-item"><input type="checkbox" id="sec-graficas-costo" checked><label for="sec-graficas-costo">📈 Gráficas — Costo por Tipo de Transacción</label><span class="sec-badge">3 gráficas</span></div>
       <div class="modal-sec-item"><input type="checkbox" id="sec-tabla-plazo" checked><label for="sec-tabla-plazo">📋 Tabla Detalle — Plazo de Entrega por Centro</label><span class="sec-badge">Tabla</span></div>
       <div class="modal-sec-item"><input type="checkbox" id="sec-top-suc" checked><label for="sec-top-suc">🏆 Top 15 Sucursales por Costo Pendiente</label><span class="sec-badge">Tabla</span></div>
-      <div class="modal-sec-item"><input type="checkbox" id="sec-cobertura" checked><label for="sec-cobertura">🔄 Cobertura de Abasto de Materiales — OC y Traspasos</label><span class="sec-badge">Tabla</span></div>
-      <div class="modal-sec-item"><input type="checkbox" id="sec-acuerdos" checked><label for="sec-acuerdos">🤝 Recomendaciones y Acciones de seguimiento</label><span class="sec-badge">Cards</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-cobertura" checked><label for="sec-cobertura">🔄 Cobertura de Abasto — OC y Traspasos</label><span class="sec-badge">Tabla</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-acuerdos" checked><label for="sec-acuerdos">🤝 Acuerdos y Compromisos por Centro</label><span class="sec-badge">Cards</span></div>
     </div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
@@ -211,7 +285,7 @@
     <div class="header-logo">GK</div>
     <div>
       <h1>Dashboard Picking Pendiente</h1>
-      <div class="subtitle">Análisis operativo y comercial · ZVA05VTAS/KUMO Entregas "Creado por: Francisco Javier Cerezo Ramos"</div>
+      <div class="subtitle">Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS "Creado por: Francisco Javier Cerezo Ramos"</div>
     </div>
   </div>
   <div class="badge-date" id="badge-date">Sin datos cargados</div>
@@ -244,6 +318,15 @@
   </div>
 </div>
 
+<!-- TABS NAVIGATION -->
+<div class="tabs-nav" id="tabs-nav" style="display:none;">
+  <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard-tab')">📊 Dashboard</button>
+  <button class="tab-btn" id="tab-btn-historial" onclick="switchTab('historial-tab')">🗂️ Historial de Cargas</button>
+  <button class="tab-btn" id="tab-btn-comparacion" onclick="switchTab('comparacion-tab')">📈 Comparación</button>
+</div>
+
+<!-- ========== TAB: DASHBOARD ========== -->
+<div id="dashboard-tab" class="tab-panel active">
 <!-- DASHBOARD -->
 <div id="dashboard">
 
@@ -384,11 +467,238 @@
   <div class="acuerdos-grid" id="acuerdos-grid"></div>
 
   <div style="height:40px;"></div>
+</div><!-- end dashboard (inner) -->
+</div><!-- end dashboard-tab -->
+
+<!-- ========== TAB: HISTORIAL DE CARGAS ========== -->
+<div id="historial-tab" class="tab-panel">
+  <div style="padding:24px 28px;max-width:1600px;margin:0 auto;">
+    <div class="section-header">
+      <div class="section-title">Historial de Cargas Guardadas</div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">
+      Cada archivo Excel que cargues se guarda automáticamente en <strong style="color:var(--text)">localStorage</strong> del navegador.
+      Puedes volver a consultarlo, cargarlo en el dashboard o eliminarlo. Máximo <strong style="color:var(--accent)">20 cargas</strong> almacenadas.
+    </p>
+    <div class="hist-grid" id="historial-grid"></div>
+  </div>
 </div>
 
+<!-- ========== TAB: COMPARACIÓN ========== -->
+<div id="comparacion-tab" class="tab-panel">
+  <div style="padding:24px 28px;max-width:1600px;margin:0 auto;">
+    <div class="section-header">
+      <div class="section-title">Comparación entre Cargas</div>
+    </div>
+
+    <!-- CONTROLES -->
+    <div class="comp-controls">
+      <h3>⚙️ Selecciona dos cargas para comparar</h3>
+      <div class="comp-selects">
+        <div>
+          <label>🔵 Carga A (Base / Antes)</label>
+          <select id="comp-sel-a" onchange="onCompSelChange()"><option value="">— Seleccionar —</option></select>
+        </div>
+        <div>
+          <label>🟣 Carga B (Actual / Después)</label>
+          <select id="comp-sel-b" onchange="onCompSelChange()"><option value="">— Seleccionar —</option></select>
+        </div>
+        <div>
+          <label>Filtrar Centro</label>
+          <select id="comp-filter-centro" onchange="onCompFilterChange()"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label>Filtrar Org. Ventas</label>
+          <select id="comp-filter-org" onchange="onCompFilterChange()"><option value="">Todas</option></select>
+        </div>
+        <div>
+          <label>Filtrar Transacción</label>
+          <select id="comp-filter-tx" onchange="onCompFilterChange()">
+            <option value="">Ambas</option>
+            <option value="KUMO ENTREGAS">KUMO ENTREGAS</option>
+            <option value="ZVA05VTAS">ZVA05VTAS</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button class="btn-comp-run" onclick="runComparacion()">▶ Comparar</button>
+          <button class="btn-comp-clear" onclick="clearComparacion()">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div id="comp-resultado" style="display:none;">
+
+      <!-- KPIs comparativos -->
+      <div class="section-header">
+        <div class="section-title">Indicadores Globales — Diferencias</div>
+        <button class="btn-copy" onclick="exportarInformeComparacionCompleto()" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:5px 14px;">📄 Exportar Informe Word Completo</button>
+      </div>
+      <div class="comp-kpi-grid" id="comp-kpi-grid"></div>
+
+      <!-- Gráficas comparativas -->
+      <div class="section-header"><div class="section-title">Pedidos y Costo por Centro — Comparativa</div></div>
+      <div class="comp-chart-row">
+        <div class="chart-card">
+          <h3>Pedidos únicos — A vs B (Top 15)</h3>
+          <div style="position:relative;height:400px;"><canvas id="compChartPedidos"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Costo pendiente — A vs B (Top 15)</h3>
+          <div style="position:relative;height:400px;"><canvas id="compChartCosto"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Tabla Plazo comparativa -->
+      <div class="section-header"><div class="section-title">Plazo de Entrega — Evolución por Centro</div></div>
+      <div class="comp-table-card">
+        <h3>Pedidos únicos por plazo — Carga A vs Carga B (↑ sube · ↓ baja · = igual)</h3>
+        <div class="table-wrap" id="comp-plazo-table"></div>
+      </div>
+
+      <!-- Informe por sucursal -->
+      <div class="section-header"><div class="section-title">Informe Comparativo por Sucursal</div></div>
+      <div class="comp-table-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="margin:0;">Análisis estadístico de mejora / deterioro por centro</h3>
+          <button class="sucursal-report-btn" onclick="exportarInformeSucursal()">📄 Exportar Informe Word</button>
+        </div>
+        <div id="comp-sucursal-table"></div>
+      </div>
+
+    </div><!-- end comp-resultado -->
+
+    <div id="comp-empty" style="text-align:center;padding:60px 20px;color:var(--text3);">
+      <div style="font-size:48px;margin-bottom:12px;">📊</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Selecciona dos cargas y presiona Comparar</div>
+      <div style="font-size:13px;">Necesitas al menos 2 cargas en el historial para comparar</div>
+    </div>
+  </div>
+</div><!-- end comparacion-tab -->
+
 <script>
-let RAW = [], FILTERED = [], charts = {};
+let RAW = [], FILTERED = [], charts = {}, compCharts = {};
 let CURRENT_FILENAME = '';
+let PENDING_DELETE_KEY = null;
+
+// ===== LOCALSTORAGE KEYS =====
+const LS_PREFIX = 'gk_picking_carga_';
+const LS_MAX = 20;
+
+function lsGetAllCargas() {
+  const cargas = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(LS_PREFIX)) {
+      try {
+        const obj = JSON.parse(localStorage.getItem(k));
+        if (obj) cargas.push({ key: k, ...obj });
+      } catch(e) {}
+    }
+  }
+  return cargas.sort((a, b) => b.ts - a.ts);
+}
+
+function lsSaveCarga(data) {
+  const ts = Date.now();
+  const key = LS_PREFIX + ts;
+  // Verificar limite de 20 cargas
+  const cargas = lsGetAllCargas();
+  if (cargas.length >= LS_MAX) {
+    // Eliminar la más antigua
+    const oldest = cargas[cargas.length - 1];
+    localStorage.removeItem(oldest.key);
+  }
+  // Guardar datos comprimidos (solo campos clave, no todos los renglones)
+  const snapshot = buildSnapshot(data);
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts, filename: CURRENT_FILENAME, ...snapshot }));
+    showToast('✅ Carga guardada en historial');
+  } catch(e) {
+    showToast('⚠️ Sin espacio en localStorage para guardar esta carga');
+  }
+}
+
+function lsDeleteCarga(key) {
+  localStorage.removeItem(key);
+  renderHistorial();
+  // Actualizar selectores de comparación
+  populateCompSelects();
+}
+
+// ===== SNAPSHOT: datos resumen para guardar en localStorage =====
+function buildSnapshot(rows) {
+  const totalPedidos = countDistinct(rows, 'Numero de Pedido');
+  const totalRenglones = rows.length;
+  const totalCosto = sumField(rows, 'Costo de Venta Contable Pendiente');
+  const totalCantidad = sumField(rows, 'Cantidad Pendiente');
+  const centros = new Set(rows.map(r => col(r,'Centro'))).size;
+  const kumo = rows.filter(r => col(r,'Transaccion') === 'KUMO ENTREGAS').length;
+  const vtas = rows.filter(r => col(r,'Transaccion') === 'ZVA05VTAS').length;
+
+  // Por centro: pedidos, renglones, costo, plazos
+  const byCentro = {};
+  rows.forEach(r => {
+    const c = col(r,'Centro') || '(Sin centro)';
+    const ped = col(r,'Numero de Pedido');
+    const p = col(r,'Plazo de Entrega') || 'Sin dato';
+    const costo = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
+    const cant = parseFloat(col(r,'Cantidad Pendiente')) || 0;
+    const tx = col(r,'Transaccion');
+    if (!byCentro[c]) byCentro[c] = { pedidos: new Set(), renglones: 0, costo: 0, cantidad: 0, plazos: {}, kumo: 0, vtas: 0 };
+    byCentro[c].pedidos.add(ped);
+    byCentro[c].renglones++;
+    byCentro[c].costo += costo;
+    byCentro[c].cantidad += cant;
+    byCentro[c].plazos[p] = (byCentro[c].plazos[p] || new Set());
+    byCentro[c].plazos[p].add(ped);
+    if (tx === 'KUMO ENTREGAS') byCentro[c].kumo++;
+    else if (tx === 'ZVA05VTAS') byCentro[c].vtas++;
+  });
+
+  const centroData = {};
+  Object.entries(byCentro).forEach(([c, d]) => {
+    const plazos = {};
+    Object.entries(d.plazos).forEach(([p, s]) => { plazos[p] = s.size; });
+    centroData[c] = {
+      pedidos: d.pedidos.size,
+      renglones: d.renglones,
+      costo: d.costo,
+      cantidad: d.cantidad,
+      plazos,
+      kumo: d.kumo,
+      vtas: d.vtas
+    };
+  });
+
+  // Por org: pedidos, renglones, costo
+  const byOrg = {};
+  rows.forEach(r => {
+    const o = col(r,'Organizacion de Ventas') || '(Sin org)';
+    const ped = col(r,'Numero de Pedido');
+    const costo = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
+    if (!byOrg[o]) byOrg[o] = { pedidos: new Set(), renglones: 0, costo: 0, kumo: 0, vtas: 0 };
+    byOrg[o].pedidos.add(ped);
+    byOrg[o].renglones++;
+    byOrg[o].costo += costo;
+    const tx = col(r,'Transaccion');
+    if (tx === 'KUMO ENTREGAS') byOrg[o].kumo++;
+    else if (tx === 'ZVA05VTAS') byOrg[o].vtas++;
+  });
+  const orgSummary = {};
+  Object.entries(byOrg).forEach(([o, d]) => {
+    orgSummary[o] = { pedidos: d.pedidos.size, renglones: d.renglones, costo: d.costo, kumo: d.kumo, vtas: d.vtas };
+  });
+
+  // mapa centro→org principal
+  const orgData = {};
+  rows.forEach(r => {
+    const c = col(r,'Centro') || '(Sin centro)';
+    if (!orgData[c]) orgData[c] = col(r,'Organizacion de Ventas') || '';
+  });
+
+  return { totalPedidos, totalRenglones, totalCosto, totalCantidad, centros, kumo, vtas, centroData, orgSummary, orgData };
+}
 
 // ===== TOAST =====
 function showToast(msg) {
@@ -598,7 +908,7 @@ function confirmarDescarga() {
     graficasCentro:document.getElementById('sec-graficas-centro').checked,
     graficasPlazo: document.getElementById('sec-graficas-plazo').checked,
     graficasCosto: document.getElementById('sec-graficas-costo').checked,
-    tablaPlayzo:   document.getElementById('sec-tabla-plazo').checked,
+    tablaPlazo:    document.getElementById('sec-tabla-plazo').checked,
     topSuc:        document.getElementById('sec-top-suc').checked,
     cobertura:     document.getElementById('sec-cobertura').checked,
     acuerdos:      document.getElementById('sec-acuerdos').checked,
@@ -699,7 +1009,7 @@ function buildWordReport(secs = {}) {
     graficasCentro: secs.graficasCentro !== false,
     graficasPlazo: secs.graficasPlazo !== false,
     graficasCosto: secs.graficasCosto !== false,
-    tablaPlayzo: secs.tablaPlayzo !== false,
+    tablaPlayzo: secs.tablaPlazo !== false,
     topSuc: secs.topSuc !== false,
     cobertura: secs.cobertura !== false,
     acuerdos: secs.acuerdos !== false,
@@ -1107,7 +1417,7 @@ function buildReportHtml() {
     <div class="logo">GK</div>
     <div>
       <h1>Reporte Picking Pendiente</h1>
-      <p>Análisis operativo y comercial · VA05 · Francisco Javier Cerezo Ramos</p>
+      <p>Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS · Autor: Francisco Javier Cerezo Ramos</p>
     </div>
   </div>
   <div class="filter-badge">
@@ -1208,11 +1518,19 @@ function handleFile(file) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('upload-section').style.display = 'none';
       document.getElementById('top-bar').style.display = 'flex';
-      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('tabs-nav').style.display = 'flex';
+      document.getElementById('dashboard-tab').querySelector('#dashboard').style.display = 'block';
       document.getElementById('file-label').textContent = file.name;
       document.getElementById('badge-date').textContent = 'Datos cargados: ' + new Date().toLocaleDateString('es-MX');
       populateFilters();
       renderAll();
+      // Guardar en localStorage
+      lsSaveCarga(RAW);
+      // Actualizar historial y comparacion
+      renderHistorial();
+      populateCompSelects();
+      // Asegurar tab activo = dashboard
+      switchTab('dashboard-tab');
     } catch(err) {
       document.getElementById('loading').style.display = 'none';
       alert('Error al procesar el archivo: ' + err.message);
@@ -1944,7 +2262,803 @@ function renderAcuerdos() {
 
   document.getElementById('acuerdos-grid').innerHTML = html;
 }
+
+// ===== TABS =====
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  const btnMap = { 'dashboard-tab': 'tab-btn-dashboard', 'historial-tab': 'tab-btn-historial', 'comparacion-tab': 'tab-btn-comparacion' };
+  if (btnMap[tabId]) document.getElementById(btnMap[tabId]).classList.add('active');
+  if (tabId === 'historial-tab') renderHistorial();
+  if (tabId === 'comparacion-tab') { populateCompSelects(); }
+}
+
+// ===== MODAL CONFIRM ELIMINAR =====
+function abrirModalConfirm(key, filename) {
+  PENDING_DELETE_KEY = key;
+  document.getElementById('modal-confirm-msg').textContent = `¿Eliminar la carga "${filename}"? Esta acción no se puede deshacer.`;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+function cerrarModalConfirm() {
+  PENDING_DELETE_KEY = null;
+  document.getElementById('modal-confirm').classList.remove('open');
+}
+function confirmarEliminar() {
+  if (PENDING_DELETE_KEY) { lsDeleteCarga(PENDING_DELETE_KEY); }
+  cerrarModalConfirm();
+  showToast('🗑️ Carga eliminada');
+}
+
+// ===== HISTORIAL =====
+function renderHistorial() {
+  const cargas = lsGetAllCargas();
+  const grid = document.getElementById('historial-grid');
+  if (!cargas.length) {
+    grid.innerHTML = `<div class="hist-empty" style="grid-column:1/-1;"><div class="ei">🗂️</div><div style="font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px;">Sin cargas guardadas</div><div style="font-size:13px;">Carga un archivo Excel y se guardará automáticamente aquí.</div></div>`;
+    return;
+  }
+  grid.innerHTML = cargas.map(c => {
+    const fecha = new Date(c.ts).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+    return `<div class="hist-card">
+      <div class="hist-card-header">
+        <span class="hist-card-title" title="${c.filename}">${c.filename || 'Sin nombre'}</span>
+        <span class="hist-card-date">${fecha}</span>
+      </div>
+      <div class="hist-card-body">
+        <div class="hist-kpi-row">
+          <div class="hist-kpi"><div class="hk-l">Pedidos</div><div class="hk-v">${fmt(c.totalPedidos)}</div></div>
+          <div class="hist-kpi"><div class="hk-l">Renglones</div><div class="hk-v">${fmt(c.totalRenglones)}</div></div>
+          <div class="hist-kpi"><div class="hk-l">Costo</div><div class="hk-v" style="font-size:13px;">${fmtM(c.totalCosto)}</div></div>
+          <div class="hist-kpi"><div class="hk-l">Centros</div><div class="hk-v">${c.centros}</div></div>
+        </div>
+        <div class="hist-actions">
+          <button class="btn-hist-load" onclick="loadCargaIntoDashboard('${c.key}')">📊 Ver Dashboard</button>
+          <button class="btn-hist-compare" onclick="switchTab('comparacion-tab')">📈 Comparar</button>
+          <button class="btn-hist-del" onclick="abrirModalConfirm('${c.key}','${(c.filename||'').replace(/'/g,"\\'")}')">🗑️ Eliminar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== CARGAR CARGA HISTÓRICA EN DASHBOARD =====
+function loadCargaIntoDashboard(key) {
+  const cargas = lsGetAllCargas();
+  const carga = cargas.find(c => c.key === key);
+  if (!carga || !carga.centroData) { showToast('⚠️ No se encontraron datos para esta carga'); return; }
+
+  // Reconstruir RAW sintético desde el snapshot centroData
+  // Cada entrada de centroData contiene pedidos, renglones, costo, cantidad, plazos, kumo, vtas
+  const syntheticRows = [];
+  Object.entries(carga.centroData).forEach(([centro, d]) => {
+    const pedidosArr = [];
+    for (let i = 0; i < d.pedidos; i++) pedidosArr.push(`PED-${centro}-${i+1}`);
+
+    // Por cada plazo, generar renglones proporcionales
+    const plazoKeys = Object.keys(d.plazos || {});
+    let renglonesGenerados = 0;
+
+    plazoKeys.forEach(plazo => {
+      const pedsPlazo = d.plazos[plazo];
+      for (let i = 0; i < pedsPlazo; i++) {
+        const pedNum = pedidosArr[i % pedidosArr.length] || `PED-${centro}-${i}`;
+        const tx = (i % (d.kumo + d.vtas || 1)) < d.kumo ? 'KUMO ENTREGAS' : 'ZVA05VTAS';
+        syntheticRows.push({
+          'Centro': centro,
+          'Numero de Pedido': pedNum,
+          'Plazo de Entrega': plazo,
+          'Transaccion': tx,
+          'Organizacion de Ventas': carga.orgData?.[centro] || 'ORG-GK',
+          'Costo de Venta Contable Pendiente': d.costo / Math.max(d.renglones, 1),
+          'Cantidad Pendiente': d.cantidad / Math.max(d.renglones, 1),
+        });
+        renglonesGenerados++;
+      }
+    });
+
+    // Si faltan renglones (sin plazos o diferencia), completar con datos globales del centro
+    const faltan = d.renglones - renglonesGenerados;
+    for (let i = 0; i < faltan; i++) {
+      const pedNum = pedidosArr[i % pedidosArr.length] || `PED-${centro}-X${i}`;
+      const tx = i < d.kumo ? 'KUMO ENTREGAS' : 'ZVA05VTAS';
+      syntheticRows.push({
+        'Centro': centro,
+        'Numero de Pedido': pedNum,
+        'Plazo de Entrega': 'Sin dato',
+        'Transaccion': tx,
+        'Organizacion de Ventas': carga.orgData?.[centro] || 'ORG-GK',
+        'Costo de Venta Contable Pendiente': d.costo / Math.max(d.renglones, 1),
+        'Cantidad Pendiente': d.cantidad / Math.max(d.renglones, 1),
+      });
+    }
+  });
+
+  RAW = syntheticRows;
+  FILTERED = [...RAW];
+  CURRENT_FILENAME = carga.filename || 'Carga histórica';
+
+  // Mostrar dashboard
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('top-bar').style.display = 'flex';
+  document.getElementById('tabs-nav').style.display = 'flex';
+  document.getElementById('dashboard-tab').querySelector('#dashboard').style.display = 'block';
+  document.getElementById('file-label').textContent = CURRENT_FILENAME + ' (historial)';
+  document.getElementById('badge-date').textContent = 'Carga: ' + new Date(carga.ts).toLocaleDateString('es-MX');
+
+  // Limpiar y re-poblar filtros
+  const oSel = document.getElementById('filter-org');
+  const cSel = document.getElementById('filter-centro');
+  oSel.innerHTML = '<option value="">Todas las Org. Ventas</option>';
+  cSel.innerHTML = '<option value="">Todos los Centros</option>';
+  const orgs = [...new Set(RAW.map(r => col(r,'Organizacion de Ventas')))].filter(Boolean).sort();
+  const centros = [...new Set(RAW.map(r => col(r,'Centro')))].filter(Boolean).sort();
+  orgs.forEach(o => oSel.appendChild(new Option(o, o)));
+  centros.forEach(c => cSel.appendChild(new Option(c, c)));
+
+  renderAll();
+  switchTab('dashboard-tab');
+  showToast('📊 Dashboard cargado: ' + CURRENT_FILENAME);
+}
+
+
+function populateCompSelects() {
+  const cargas = lsGetAllCargas();
+  const selA = document.getElementById('comp-sel-a');
+  const selB = document.getElementById('comp-sel-b');
+  const curA = selA.value, curB = selB.value;
+
+  [selA, selB].forEach(sel => {
+    sel.innerHTML = '<option value="">— Seleccionar —</option>';
+    cargas.forEach(c => {
+      const fecha = new Date(c.ts).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+      const opt = new Option(`${c.filename} · ${fecha}`, c.key);
+      sel.appendChild(opt);
+    });
+  });
+  selA.value = curA; selB.value = curB;
+
+  // Centros únicos de todas las cargas
+  const allCentros = new Set();
+  const allOrgs = new Set();
+  cargas.forEach(c => {
+    if (c.centroData) Object.keys(c.centroData).forEach(x => allCentros.add(x));
+    if (c.orgData) Object.keys(c.orgData).forEach(x => allOrgs.add(x));
+  });
+  const selC = document.getElementById('comp-filter-centro');
+  const selO = document.getElementById('comp-filter-org');
+  const curC = selC.value, curO = selO.value;
+  selC.innerHTML = '<option value="">Todos</option>';
+  selO.innerHTML = '<option value="">Todas</option>';
+  [...allCentros].sort().forEach(c => { const o = new Option(c, c); selC.appendChild(o); });
+  [...allOrgs].sort().forEach(o => { const opt = new Option(o, o); selO.appendChild(opt); });
+  selC.value = curC; selO.value = curO;
+
+  if (cargas.length < 2) {
+    document.getElementById('comp-empty').style.display = 'block';
+  }
+}
+
+function onCompSelChange() {
+  // Si ya hay ambas cargas seleccionadas, repoblar filtros de org y centro
+  const keyA = document.getElementById('comp-sel-a').value;
+  const keyB = document.getElementById('comp-sel-b').value;
+  if (!keyA && !keyB) return;
+  const cargas = lsGetAllCargas();
+  const allCentros = new Set();
+  const allOrgs = new Set();
+  [keyA, keyB].forEach(key => {
+    if (!key) return;
+    const c = cargas.find(x => x.key === key);
+    if (!c) return;
+    if (c.centroData) Object.keys(c.centroData).forEach(x => allCentros.add(x));
+    if (c.orgData) Object.values(c.orgData).filter(Boolean).forEach(o => allOrgs.add(o));
+  });
+  const selC = document.getElementById('comp-filter-centro');
+  const selO = document.getElementById('comp-filter-org');
+  const curC = selC.value, curO = selO.value;
+  selC.innerHTML = '<option value="">Todos</option>';
+  selO.innerHTML = '<option value="">Todas</option>';
+  [...allCentros].sort().forEach(c => selC.appendChild(new Option(c, c)));
+  [...allOrgs].sort().forEach(o => selO.appendChild(new Option(o, o)));
+  selC.value = allCentros.has(curC) ? curC : '';
+  selO.value = allOrgs.has(curO) ? curO : '';
+}
+
+function onCompFilterChange() {
+  // Si ya hay una comparación activa, re-ejecutar automáticamente
+  if (document.getElementById('comp-resultado').style.display !== 'none') {
+    runComparacion();
+  }
+}
+
+function runComparacion() {
+  const keyA = document.getElementById('comp-sel-a').value;
+  const keyB = document.getElementById('comp-sel-b').value;
+  if (!keyA || !keyB) { showToast('⚠️ Selecciona dos cargas para comparar'); return; }
+  if (keyA === keyB) { showToast('⚠️ Selecciona cargas distintas'); return; }
+
+  const cargas = lsGetAllCargas();
+  const cA = cargas.find(c => c.key === keyA);
+  const cB = cargas.find(c => c.key === keyB);
+  if (!cA || !cB) { showToast('Error: no se encontraron los datos'); return; }
+
+  const centroFiltro = document.getElementById('comp-filter-centro').value;
+  const orgFiltro = document.getElementById('comp-filter-org').value;
+  const txFiltro = document.getElementById('comp-filter-tx').value;
+
+  // Filtrar centroData según centro y/o org
+  function filtrarCentros(carga) {
+    let cd = carga.centroData || {};
+    if (centroFiltro) {
+      cd = centroFiltro in cd ? { [centroFiltro]: cd[centroFiltro] } : {};
+    }
+    if (orgFiltro && carga.orgData) {
+      cd = Object.fromEntries(Object.entries(cd).filter(([c]) => carga.orgData[c] === orgFiltro));
+    }
+    // Filtrar por transaccion: ajustar pedidos/renglones a kumo o vtas proporcional
+    if (txFiltro && cd) {
+      cd = Object.fromEntries(Object.entries(cd).map(([c, d]) => {
+        if (txFiltro === 'KUMO ENTREGAS') {
+          const ratio = d.renglones > 0 ? d.kumo / d.renglones : 0;
+          return [c, { ...d, pedidos: Math.round(d.pedidos * ratio), renglones: d.kumo, costo: d.costo * ratio, cantidad: d.cantidad * ratio }];
+        } else {
+          const ratio = d.renglones > 0 ? d.vtas / d.renglones : 0;
+          return [c, { ...d, pedidos: Math.round(d.pedidos * ratio), renglones: d.vtas, costo: d.costo * ratio, cantidad: d.cantidad * ratio }];
+        }
+      }));
+    }
+    return cd;
+  }
+
+  const centrosA = filtrarCentros(cA);
+  const centrosB = filtrarCentros(cB);
+
+  document.getElementById('comp-empty').style.display = 'none';
+  document.getElementById('comp-resultado').style.display = 'block';
+
+  // Guardar estado actual de comparación para el export Word
+  window._lastCompState = { cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro };
+
+  renderCompKPIs(cA, cB, centroFiltro, centrosA, centrosB);
+  renderCompCharts(cA, cB, centrosA, centrosB);
+  renderCompPlazoTable(cA, cB, centrosA, centrosB);
+  renderCompSucursalTable(cA, cB, centrosA, centrosB);
+}
+
+function clearComparacion() {
+  document.getElementById('comp-resultado').style.display = 'none';
+  document.getElementById('comp-empty').style.display = 'block';
+  document.getElementById('comp-sel-a').value = '';
+  document.getElementById('comp-sel-b').value = '';
+}
+
+function deltaArrow(a, b, invertGood) {
+  // invertGood=true: lower B is good (e.g. renglones pendientes)
+  if (a === 0 && b === 0) return '<span class="comp-delta-neu">= sin cambio</span>';
+  const diff = b - a;
+  const pct = a > 0 ? ((diff / a) * 100).toFixed(1) : '—';
+  const isGood = invertGood ? diff < 0 : diff > 0;
+  const isNeu = diff === 0;
+  const cls = isNeu ? 'comp-delta-neu' : isGood ? 'comp-delta-pos' : 'comp-delta-neg';
+  const arrow = isNeu ? '=' : diff > 0 ? '▲' : '▼';
+  const sign = diff > 0 ? '+' : '';
+  return `<span class="${cls}">${arrow} ${sign}${pct !== '—' ? pct + '%' : fmt(Math.abs(diff))}</span>`;
+}
+
+function sumCentros(centros, field) {
+  return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0);
+}
+
+function renderCompKPIs(cA, cB, centroFiltro, centrosA, centrosB) {
+  // Compute totals directly from the (already filtered) centros objects
+  function sumC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
+  function countC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
+
+  const pedA = sumC(centrosA, 'pedidos');
+  const pedB = sumC(centrosB, 'pedidos');
+  const renA = sumC(centrosA, 'renglones');
+  const renB = sumC(centrosB, 'renglones');
+  const cosA = sumC(centrosA, 'costo');
+  const cosB = sumC(centrosB, 'costo');
+  const canA = sumC(centrosA, 'cantidad');
+  const canB = sumC(centrosB, 'cantidad');
+  const kuA = sumC(centrosA, 'kumo');
+  const kuB = sumC(centrosB, 'kumo');
+  const vtA = sumC(centrosA, 'vtas');
+  const vtB = sumC(centrosB, 'vtas');
+
+  const kpis = [
+    { label: 'Pedidos únicos', a: pedA, b: pedB, fmt: fmt, inv: true },
+    { label: 'Renglones totales', a: renA, b: renB, fmt: fmt, inv: true },
+    { label: 'Costo pendiente', a: cosA, b: cosB, fmt: fmtM, inv: true },
+    { label: 'Cantidad pendiente', a: canA, b: canB, fmt: fmt, inv: true },
+    { label: 'KUMO ENTREGAS', a: kuA, b: kuB, fmt: fmt, inv: true },
+    { label: 'ZVA05VTAS', a: vtA, b: vtB, fmt: fmt, inv: true },
+  ];
+
+  document.getElementById('comp-kpi-grid').innerHTML = kpis.map(k => `
+    <div class="comp-kpi-card">
+      <div class="comp-kpi-label">${k.label}</div>
+      <div class="comp-kpi-vals">
+        <span class="comp-kpi-a" title="Carga A">${k.fmt(k.a)}</span>
+        <span class="comp-kpi-arrow">→</span>
+        <span class="comp-kpi-b" title="Carga B">${k.fmt(k.b)}</span>
+      </div>
+      <div class="comp-kpi-delta">${deltaArrow(k.a, k.b, k.inv)}</div>
+    </div>`).join('');
+}
+
+function renderCompCharts(cA, cB, centrosA, centrosB) {
+  // Centros en común o unión
+  const allCentros = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])];
+  const top15 = allCentros.sort((a,b) => {
+    const bVal = (centrosB[b]?.pedidos || 0) + (centrosA[b]?.pedidos || 0);
+    const aVal = (centrosB[a]?.pedidos || 0) + (centrosA[a]?.pedidos || 0);
+    return bVal - aVal;
+  }).slice(0, 15);
+
+  // Chart Pedidos
+  ['compChartPedidos', 'compChartCosto'].forEach(id => {
+    if (compCharts[id]) { compCharts[id].destroy(); delete compCharts[id]; }
+  });
+
+  compCharts['compChartPedidos'] = new Chart(document.getElementById('compChartPedidos'), {
+    type: 'bar',
+    data: {
+      labels: top15,
+      datasets: [
+        { label: 'Carga A', data: top15.map(c => centrosA[c]?.pedidos || 0), backgroundColor: '#38bdf888', borderColor: '#38bdf8', borderWidth: 2, borderRadius: 3 },
+        { label: 'Carga B', data: top15.map(c => centrosB[c]?.pedidos || 0), backgroundColor: '#a78bfa88', borderColor: '#a78bfa', borderWidth: 2, borderRadius: 3 }
+      ]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) + ' ped.' } } },
+      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 10 } }, grid: { display: false } } }
+    }
+  });
+
+  compCharts['compChartCosto'] = new Chart(document.getElementById('compChartCosto'), {
+    type: 'bar',
+    data: {
+      labels: top15,
+      datasets: [
+        { label: 'Carga A', data: top15.map(c => centrosA[c]?.costo || 0), backgroundColor: '#38bdf888', borderColor: '#38bdf8', borderWidth: 2, borderRadius: 3 },
+        { label: 'Carga B', data: top15.map(c => centrosB[c]?.costo || 0), backgroundColor: '#a78bfa88', borderColor: '#a78bfa', borderWidth: 2, borderRadius: 3 }
+      ]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmtM(c.raw) } } },
+      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 10 } }, grid: { display: false } } }
+    }
+  });
+}
+
+function renderCompPlazoTable(cA, cB, centrosA, centrosB) {
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+  const allPlazosSet = new Set();
+  Object.values({ ...centrosA, ...centrosB }).forEach(d => {
+    if (d.plazos) Object.keys(d.plazos).forEach(p => allPlazosSet.add(p));
+  });
+  const rawPlazos = [...allPlazosSet];
+  const plazos = [
+    ...PRIORITY_PLAZOS.filter(p => rawPlazos.includes(p)),
+    ...rawPlazos.filter(p => !PRIORITY_PLAZOS.includes(p)).sort()
+  ];
+
+  const allCentros = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])].sort();
+
+  let html = `<table><thead><tr>
+    <th>Centro</th>
+    <th class="num">Ped. A</th>
+    <th class="num">Ped. B</th>
+    <th class="num">Δ Pedidos</th>
+    <th class="num">Costo A</th>
+    <th class="num">Costo B</th>
+    <th class="num">Δ Costo</th>
+    ${plazos.map(p => {
+      const isPri = PRIORITY_PLAZOS.includes(p);
+      return `<th class="num" style="${isPri ? 'color:' + plazoColor(p) + ';font-weight:800;' : ''}">${isPri ? '⚡ ' : ''}${p.length > 12 ? p.slice(0,11) + '…' : p}<br><span style="font-size:9px;font-weight:400;">A→B</span></th>`;
+    }).join('')}
+  </tr></thead><tbody>`;
+
+  allCentros.forEach(c => {
+    const dA = centrosA[c] || {};
+    const dB = centrosB[c] || {};
+    const pedDiff = (dB.pedidos || 0) - (dA.pedidos || 0);
+    const cosDiff = (dB.costo || 0) - (dA.costo || 0);
+    const pedColor = pedDiff < 0 ? 'var(--success)' : pedDiff > 0 ? 'var(--danger)' : 'var(--text3)';
+    const cosColor = cosDiff < 0 ? 'var(--success)' : cosDiff > 0 ? 'var(--danger)' : 'var(--text3)';
+
+    html += `<tr>
+      <td style="font-weight:600;color:var(--accent3);font-size:11px;">${c}</td>
+      <td class="num" style="color:var(--kumo)">${fmt(dA.pedidos || 0)}</td>
+      <td class="num" style="color:var(--vtas)">${fmt(dB.pedidos || 0)}</td>
+      <td class="num" style="color:${pedColor};font-weight:700;">${pedDiff >= 0 ? '+' : ''}${fmt(pedDiff)}</td>
+      <td class="num" style="color:var(--kumo)">${fmtM(dA.costo || 0)}</td>
+      <td class="num" style="color:var(--vtas)">${fmtM(dB.costo || 0)}</td>
+      <td class="num" style="color:${cosColor};font-weight:700;">${cosDiff >= 0 ? '+' : ''}${fmtM(cosDiff)}</td>
+      ${plazos.map(p => {
+        const pA = dA.plazos?.[p] || 0;
+        const pB = dB.plazos?.[p] || 0;
+        const diff = pB - pA;
+        const color = diff < 0 ? 'var(--success)' : diff > 0 ? 'var(--danger)' : 'var(--text3)';
+        const sym = diff < 0 ? '↓' : diff > 0 ? '↑' : '=';
+        return `<td class="num" style="font-size:11px;color:${color};">${pA > 0 || pB > 0 ? `${fmt(pA)}→${fmt(pB)} <span style="font-weight:700;">${sym}</span>` : '—'}</td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('comp-plazo-table').innerHTML = html;
+}
+
+function renderCompSucursalTable(cA, cB, centrosA, centrosB) {
+  const allCentros = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])].sort();
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  let html = `<table><thead><tr>
+    <th>Centro / Sucursal</th>
+    <th class="num">Pedidos A</th>
+    <th class="num">Pedidos B</th>
+    <th class="num">Δ%</th>
+    <th class="num">Costo A</th>
+    <th class="num">Costo B</th>
+    <th class="num">Δ% Costo</th>
+    <th class="num">Inmed. A→B</th>
+    <th class="num">Domicilio A→B</th>
+    <th>Diagnóstico</th>
+  </tr></thead><tbody>`;
+
+  allCentros.forEach(c => {
+    const dA = centrosA[c] || {};
+    const dB = centrosB[c] || {};
+    const pedA = dA.pedidos || 0, pedB = dB.pedidos || 0;
+    const cosA = dA.costo || 0, cosB = dB.costo || 0;
+    const pedDiff = pedA > 0 ? ((pedB - pedA) / pedA * 100).toFixed(1) : null;
+    const cosDiff = cosA > 0 ? ((cosB - cosA) / cosA * 100).toFixed(1) : null;
+    const inmA = dA.plazos?.['ENTREGA INMEDIATA'] || 0;
+    const inmB = dB.plazos?.['ENTREGA INMEDIATA'] || 0;
+    const domA = dA.plazos?.['ENVÍO A DOMICILIO'] || 0;
+    const domB = dB.plazos?.['ENVÍO A DOMICILIO'] || 0;
+
+    const pedColor = pedDiff !== null ? (parseFloat(pedDiff) < 0 ? 'var(--success)' : parseFloat(pedDiff) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
+    const cosColor = cosDiff !== null ? (parseFloat(cosDiff) < 0 ? 'var(--success)' : parseFloat(cosDiff) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
+
+    // Diagnóstico automático
+    const diags = [];
+    if (pedDiff !== null) {
+      if (parseFloat(pedDiff) <= -20) diags.push(`<span style="color:var(--success)">✅ Reducción significativa de pedidos (${pedDiff}%)</span>`);
+      else if (parseFloat(pedDiff) >= 20) diags.push(`<span style="color:var(--danger)">🔴 Aumento crítico de pedidos (+${pedDiff}%)</span>`);
+      else if (parseFloat(pedDiff) < 0) diags.push(`<span style="color:var(--success)">📉 Leve mejora en pedidos (${pedDiff}%)</span>`);
+      else if (parseFloat(pedDiff) > 0) diags.push(`<span style="color:var(--warn)">⚠️ Incremento en pedidos (+${pedDiff}%)</span>`);
+    }
+    if (inmB > inmA) diags.push(`<span style="color:var(--warn)">⚡ Más pendientes de entrega inmediata (+${fmt(inmB-inmA)})</span>`);
+    else if (inmB < inmA) diags.push(`<span style="color:var(--success)">⚡ Menos inmediatas pendientes (${fmt(inmA-inmB)} resueltas)</span>`);
+    if (domB > domA) diags.push(`<span style="color:var(--warn)">🏠 Más envíos a domicilio pendientes (+${fmt(domB-domA)})</span>`);
+    if (cosDiff !== null && parseFloat(cosDiff) <= -15) diags.push(`<span style="color:var(--success)">💰 Costo pendiente mejoró significativamente (${cosDiff}%)</span>`);
+    if (diags.length === 0) diags.push('<span style="color:var(--text3)">— Sin cambios relevantes</span>');
+
+    html += `<tr>
+      <td style="font-weight:700;color:var(--accent3);font-size:12px;">${c}</td>
+      <td class="num" style="color:var(--kumo)">${fmt(pedA)}</td>
+      <td class="num" style="color:var(--vtas)">${fmt(pedB)}</td>
+      <td class="num" style="color:${pedColor};font-weight:700;">${pedDiff !== null ? (parseFloat(pedDiff) >= 0 ? '+' : '') + pedDiff + '%' : '—'}</td>
+      <td class="num" style="color:var(--kumo)">${fmtM(cosA)}</td>
+      <td class="num" style="color:var(--vtas)">${fmtM(cosB)}</td>
+      <td class="num" style="color:${cosColor};font-weight:700;">${cosDiff !== null ? (parseFloat(cosDiff) >= 0 ? '+' : '') + cosDiff + '%' : '—'}</td>
+      <td class="num" style="font-size:11px;">${inmA > 0 || inmB > 0 ? fmt(inmA) + '→' + fmt(inmB) : '—'}</td>
+      <td class="num" style="font-size:11px;">${domA > 0 || domB > 0 ? fmt(domA) + '→' + fmt(domB) : '—'}</td>
+      <td style="font-size:11px;min-width:200px;">${diags.join('<br>')}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('comp-sucursal-table').innerHTML = html;
+}
+
+// ===== EXPORTAR INFORME COMPARACIÓN COMPLETO (WORD) =====
+function exportarInformeComparacionCompleto() {
+  if (!window._lastCompState) { showToast('⚠️ Ejecuta primero la comparación'); return; }
+  const { cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro } = window._lastCompState;
+
+  showToast('⏳ Generando informe completo...');
+  setTimeout(() => {
+    try {
+      const html = buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro);
+      const blob = new Blob([html], { type: 'application/vnd.ms-word;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Informe_Comparacion_GK_${new Date().toISOString().slice(0,10)}.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✅ Informe Word exportado');
+    } catch(e) {
+      showToast('Error al generar informe: ' + e.message);
+    }
+  }, 120);
+}
+
+// Mantener el botón pequeño de "Exportar Informe Word" de sucursal como alias
+function exportarInformeSucursal() { exportarInformeComparacionCompleto(); }
+
+function buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro) {
+  const dateStr = new Date().toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const fechaA = new Date(cA.ts).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const fechaB = new Date(cB.ts).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+
+  function sumC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
+
+  const pedA = sumC(centrosA,'pedidos'), pedB = sumC(centrosB,'pedidos');
+  const renA = sumC(centrosA,'renglones'), renB = sumC(centrosB,'renglones');
+  const cosA = sumC(centrosA,'costo'), cosB = sumC(centrosB,'costo');
+  const canA = sumC(centrosA,'cantidad'), canB = sumC(centrosB,'cantidad');
+  const kuA = sumC(centrosA,'kumo'), kuB = sumC(centrosB,'kumo');
+  const vtA = sumC(centrosA,'vtas'), vtB = sumC(centrosB,'vtas');
+
+  function diffPct(a, b) { return a > 0 ? ((b-a)/a*100).toFixed(1) : '—'; }
+  function diffColor(a, b, invert) {
+    const d = b - a;
+    if (d === 0) return '#555';
+    const good = invert ? d < 0 : d > 0;
+    return good ? '#1E8449' : '#C0392B';
+  }
+  function fmtDiff(a, b) {
+    const p = diffPct(a, b);
+    if (p === '—') return '—';
+    return (parseFloat(p) >= 0 ? '+' : '') + p + '%';
+  }
+
+  const kpiRows = [
+    { l:'Pedidos únicos', a:pedA, b:pedB, fa:fmt, fb:fmt, inv:true },
+    { l:'Renglones totales', a:renA, b:renB, fa:fmt, fb:fmt, inv:true },
+    { l:'Costo pendiente', a:cosA, b:cosB, fa:fmtM, fb:fmtM, inv:true },
+    { l:'Cantidad pendiente', a:canA, b:canB, fa:fmt, fb:fmt, inv:true },
+    { l:'KUMO ENTREGAS', a:kuA, b:kuB, fa:fmt, fb:fmt, inv:true },
+    { l:'ZVA05VTAS', a:vtA, b:vtB, fa:fmt, fb:fmt, inv:true },
+  ].map((k,i) => {
+    const col2 = diffColor(k.a, k.b, k.inv);
+    return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+      <td style="padding:6px 10px;font-size:9pt;">${k.l}</td>
+      <td style="padding:6px 10px;text-align:center;font-size:9pt;color:#1A5276;font-weight:bold;">${k.fa(k.a)}</td>
+      <td style="padding:6px 10px;text-align:center;font-size:9pt;color:#6C3483;font-weight:bold;">${k.fb(k.b)}</td>
+      <td style="padding:6px 10px;text-align:center;font-size:9pt;color:${col2};font-weight:bold;">${fmtDiff(k.a, k.b)}</td>
+    </tr>`;
+  }).join('');
+
+  // Tabla de plazo por centro
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA','ENVÍO A DOMICILIO'];
+  const allPlazosSet = new Set();
+  Object.values({...centrosA,...centrosB}).forEach(d => { if(d.plazos) Object.keys(d.plazos).forEach(p => allPlazosSet.add(p)); });
+  const plazosCols = [...PRIORITY_PLAZOS.filter(p=>allPlazosSet.has(p)), ...[...allPlazosSet].filter(p=>!PRIORITY_PLAZOS.includes(p)).sort()];
+  const allCentros = [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])].sort();
+
+  const plazoHeaderCols = plazosCols.map(p => `<th style="padding:5px 6px;text-align:center;font-size:8pt;background:#1F3864;color:#fff;max-width:60px;">${p.length>10?p.slice(0,9)+'…':p}<br><span style="font-size:7pt;font-weight:400;">A→B</span></th>`).join('');
+
+  const plazoRows = allCentros.map((c,i) => {
+    const dA = centrosA[c]||{}, dB = centrosB[c]||{};
+    const pedDiff = (dB.pedidos||0)-(dA.pedidos||0);
+    const cosDiff = (dB.costo||0)-(dA.costo||0);
+    const pdCol = pedDiff<0?'#1E8449':pedDiff>0?'#C0392B':'#555';
+    const cdCol = cosDiff<0?'#1E8449':cosDiff>0?'#C0392B':'#555';
+    const plazoCells = plazosCols.map(p => {
+      const pA = dA.plazos?.[p]||0, pB = dB.plazos?.[p]||0;
+      const diff = pB-pA;
+      const sym = diff<0?'↓':diff>0?'↑':'=';
+      const col2 = diff<0?'#1E8449':diff>0?'#C0392B':'#555';
+      return `<td style="padding:4px 6px;text-align:center;font-size:8pt;color:${col2};">${pA>0||pB>0?`${pA}→${pB} ${sym}`:'—'}</td>`;
+    }).join('');
+    return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+      <td style="padding:5px 8px;font-weight:bold;color:#1F3864;font-size:9pt;">${c}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:#1A5276;font-weight:bold;">${fmt(dA.pedidos||0)}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:#6C3483;font-weight:bold;">${fmt(dB.pedidos||0)}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:${pdCol};font-weight:bold;">${pedDiff>=0?'+':''}${fmt(pedDiff)}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:#1A5276;">${fmtM(dA.costo||0)}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:#6C3483;">${fmtM(dB.costo||0)}</td>
+      <td style="padding:5px 6px;text-align:center;font-size:9pt;color:${cdCol};font-weight:bold;">${cosDiff>=0?'+':''}${fmtM(cosDiff)}</td>
+      ${plazoCells}
+    </tr>`;
+  }).join('');
+
+  // Tabla análisis por sucursal
+  const sucursalRows = allCentros.map((c,i) => {
+    const dA = centrosA[c]||{}, dB = centrosB[c]||{};
+    const pA = dA.pedidos||0, pB = dB.pedidos||0;
+    const cA2 = dA.costo||0, cB2 = dB.costo||0;
+    const pd = pA>0?((pB-pA)/pA*100).toFixed(1):'—';
+    const cd = cA2>0?((cB2-cA2)/cA2*100).toFixed(1):'—';
+    const inmA = dA.plazos?.['ENTREGA INMEDIATA']||0, inmB = dB.plazos?.['ENTREGA INMEDIATA']||0;
+    const domA = dA.plazos?.['ENVÍO A DOMICILIO']||0, domB = dB.plazos?.['ENVÍO A DOMICILIO']||0;
+    const pdCol = pd!=='—'?(parseFloat(pd)<0?'#1E8449':parseFloat(pd)>0?'#C0392B':'#555'):'#555';
+    const cdCol = cd!=='—'?(parseFloat(cd)<0?'#1E8449':parseFloat(cd)>0?'#C0392B':'#555'):'#555';
+    const diags = [];
+    if (pd!=='—') {
+      if (parseFloat(pd)<=-20) diags.push('✅ Reducción significativa de pedidos ('+pd+'%)');
+      else if (parseFloat(pd)>=20) diags.push('🔴 Aumento crítico (+'+pd+'%)');
+      else if (parseFloat(pd)<0) diags.push('📉 Leve mejora ('+pd+'%)');
+      else if (parseFloat(pd)>0) diags.push('⚠️ Incremento (+'+pd+'%)');
+    }
+    if (inmB>inmA) diags.push('⚡ Más inmediatas pendientes (+' +(inmB-inmA)+')');
+    else if (inmB<inmA) diags.push('⚡ Menos inmediatas ('+fmt(inmA-inmB)+' resueltas)');
+    if (domB>domA) diags.push('🏠 Más domicilio (+'+fmt(domB-domA)+')');
+    if (cd!=='—'&&parseFloat(cd)<=-15) diags.push('💰 Costo mejoró significativamente ('+cd+'%)');
+    if (diags.length===0) diags.push('— Sin cambios relevantes');
+    return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+      <td style="padding:6px 8px;font-weight:bold;color:#1F3864;font-size:9pt;">${c}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:#1A5276;font-weight:bold;">${fmt(pA)}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:#6C3483;font-weight:bold;">${fmt(pB)}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:${pdCol};font-weight:bold;">${pd!=='—'?(parseFloat(pd)>=0?'+':'')+pd+'%':'—'}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:#1A5276;">${fmtM(cA2)}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:#6C3483;">${fmtM(cB2)}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;color:${cdCol};font-weight:bold;">${cd!=='—'?(parseFloat(cd)>=0?'+':'')+cd+'%':'—'}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;">${inmA>0||inmB>0?inmA+'→'+inmB:'—'}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:9pt;">${domA>0||domB>0?domA+'→'+domB:'—'}</td>
+      <td style="padding:6px 8px;font-size:8pt;color:#333;">${diags.join(' | ')}</td>
+    </tr>`;
+  }).join('');
+
+  // Resumen de centros: top mejoras y deterioros
+  const centrosDelta = allCentros.map(c => {
+    const dA = centrosA[c]||{}, dB = centrosB[c]||{};
+    const pA = dA.pedidos||0, pB = dB.pedidos||0;
+    const delta = pA>0?((pB-pA)/pA*100):0;
+    return { c, pA, pB, delta, cosA:dA.costo||0, cosB:dB.costo||0 };
+  }).filter(x=>x.pA>0||x.pB>0);
+
+  const topMejoras = [...centrosDelta].sort((a,b)=>a.delta-b.delta).slice(0,5);
+  const topDeterioros = [...centrosDelta].sort((a,b)=>b.delta-a.delta).slice(0,5);
+
+  const filtrosStr = [
+    centroFiltro ? `Centro: ${centroFiltro}` : '',
+    orgFiltro ? `Org. Ventas: ${orgFiltro}` : '',
+    txFiltro ? `Transacción: ${txFiltro}` : '',
+  ].filter(Boolean).join(' · ') || 'Sin filtros aplicados (vista global)';
+
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>
+  @page { margin: 2cm 2.5cm; }
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #222; background: #fff; }
+  h2 { font-size: 14pt; color: #1F3864; border-bottom: 2px solid #C55A11; padding-bottom: 4px; margin-top: 22px; margin-bottom: 10px; }
+  h3 { font-size: 11pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 5px; }
+  table { border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; }
+  td, th { font-family: Calibri, Arial, sans-serif; }
+  p { margin: 3px 0; font-size: 9.5pt; }
+</style></head>
+<body>
+
+<!-- CABECERA -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1F3864;">
+  <tr>
+    <td style="padding:16px 24px;color:#fff;">
+      <div style="font-size:20pt;font-weight:bold;">Informe Comparativo de Cargas</div>
+      <div style="font-size:10pt;color:#BDC3C7;margin-top:3px;">Dashboard Picking Pendiente GK · Francisco Javier Cerezo Ramos</div>
+    </td>
+    <td style="padding:16px 24px;text-align:right;color:#fff;font-size:9pt;vertical-align:top;">
+      <div style="font-weight:bold;">${dateStr}</div>
+      <div style="color:#BDC3C7;margin-top:5px;">🔵 Carga A: <strong>${cA.filename||'—'}</strong> (${fechaA})</div>
+      <div style="color:#BDC3C7;">🟣 Carga B: <strong>${cB.filename||'—'}</strong> (${fechaB})</div>
+      <div style="color:#C55A11;margin-top:4px;font-size:8pt;">${filtrosStr}</div>
+    </td>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#C55A11;height:4px;"><tr><td></td></tr></table>
+
+<div style="padding:18px 0;">
+
+<!-- 1. KPIs GLOBALES -->
+<h2>&#9632; 1. Indicadores Globales — Comparativa</h2>
+<table width="100%" cellpadding="6" cellspacing="0" style="border:1px solid #BDC3C7;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:7px 10px;text-align:left;font-size:9pt;">Indicador</th>
+    <th style="padding:7px 10px;text-align:center;font-size:9pt;">🔵 Carga A (${fechaA})</th>
+    <th style="padding:7px 10px;text-align:center;font-size:9pt;">🟣 Carga B (${fechaB})</th>
+    <th style="padding:7px 10px;text-align:center;font-size:9pt;">Variación</th>
+  </tr>
+  ${kpiRows}
+</table>
+
+<!-- 2. RESUMEN EJECUTIVO -->
+<h2>&#9632; 2. Resumen Ejecutivo — Top Centros</h2>
+<table width="100%" cellpadding="0" cellspacing="8" style="border-collapse:separate;">
+  <tr>
+    <td width="50%" style="vertical-align:top;padding-right:10px;">
+      <h3 style="color:#1E8449;">✅ Top 5 Centros con Mayor Mejora</h3>
+      <table width="100%" cellpadding="5" cellspacing="0" style="border:1px solid #BDC3C7;">
+        <tr style="background:#1E8449;color:#fff;">
+          <th style="padding:5px 8px;text-align:left;font-size:8pt;">Centro</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Ped. A</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Ped. B</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Δ%</th>
+        </tr>
+        ${topMejoras.map((x,i)=>`<tr style="background:${i%2===0?'#EAFAF1':'#fff'};">
+          <td style="padding:4px 8px;font-size:8pt;font-weight:bold;color:#1F3864;">${x.c}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;">${fmt(x.pA)}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;">${fmt(x.pB)}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;color:#1E8449;font-weight:bold;">${x.delta<=0?(x.delta.toFixed(1)+'%'):'+'+(x.delta.toFixed(1))+'%'}</td>
+        </tr>`).join('')}
+      </table>
+    </td>
+    <td width="50%" style="vertical-align:top;padding-left:10px;">
+      <h3 style="color:#C0392B;">🔴 Top 5 Centros con Mayor Deterioro</h3>
+      <table width="100%" cellpadding="5" cellspacing="0" style="border:1px solid #BDC3C7;">
+        <tr style="background:#C0392B;color:#fff;">
+          <th style="padding:5px 8px;text-align:left;font-size:8pt;">Centro</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Ped. A</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Ped. B</th>
+          <th style="padding:5px 8px;text-align:center;font-size:8pt;">Δ%</th>
+        </tr>
+        ${topDeterioros.map((x,i)=>`<tr style="background:${i%2===0?'#FDFEFE':'#fff'};">
+          <td style="padding:4px 8px;font-size:8pt;font-weight:bold;color:#1F3864;">${x.c}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;">${fmt(x.pA)}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;">${fmt(x.pB)}</td>
+          <td style="padding:4px 8px;text-align:center;font-size:8pt;color:#C0392B;font-weight:bold;">${x.delta>=0?'+':''}${x.delta.toFixed(1)}%</td>
+        </tr>`).join('')}
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- 3. EVOLUCIÓN DE PLAZOS -->
+<h2>&#9632; 3. Evolución de Plazos de Entrega por Centro</h2>
+<p style="font-size:8.5pt;color:#555;margin-bottom:8px;">↑ = subió · ↓ = bajó · = igual. Los valores muestran pedidos únicos por plazo.</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BDC3C7;font-size:9pt;">
+  <thead><tr style="background:#1F3864;color:#fff;">
+    <th style="padding:6px 8px;text-align:left;font-size:8.5pt;">Centro</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Ped. A</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Ped. B</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Δ Pedidos</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Costo A</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Costo B</th>
+    <th style="padding:6px 8px;text-align:center;font-size:8.5pt;">Δ Costo</th>
+    ${plazoHeaderCols}
+  </tr></thead>
+  <tbody>${plazoRows}</tbody>
+</table>
+
+<!-- 4. ANÁLISIS DETALLADO POR SUCURSAL -->
+<h2>&#9632; 4. Análisis Detallado de Mejora / Deterioro por Sucursal</h2>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #BDC3C7;font-size:9pt;">
+  <thead><tr style="background:#1F3864;color:#fff;">
+    <th style="padding:6px 8px;text-align:left;">Centro</th>
+    <th style="padding:6px 8px;text-align:center;">Ped. A</th>
+    <th style="padding:6px 8px;text-align:center;">Ped. B</th>
+    <th style="padding:6px 8px;text-align:center;">Δ%</th>
+    <th style="padding:6px 8px;text-align:center;">Costo A</th>
+    <th style="padding:6px 8px;text-align:center;">Costo B</th>
+    <th style="padding:6px 8px;text-align:center;">Δ% Costo</th>
+    <th style="padding:6px 8px;text-align:center;">Inmed. A→B</th>
+    <th style="padding:6px 8px;text-align:center;">Domicilio A→B</th>
+    <th style="padding:6px 8px;text-align:left;">Diagnóstico</th>
+  </tr></thead>
+  <tbody>${sucursalRows}</tbody>
+</table>
+
+</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1F3864;margin-top:30px;">
+  <tr><td style="padding:10px 24px;color:#BDC3C7;font-size:8pt;text-align:center;">
+    Informe Comparativo · Dashboard Picking Pendiente GK · ${dateStr} · Francisco Javier Cerezo Ramos
+  </td></tr>
+</table>
+</body></html>`;
+}
+
+
+// ===== INIT: cargar historial al abrir =====
+window.addEventListener('DOMContentLoaded', () => {
+  // Mostrar tabs-nav solo si ya hay cargas guardadas
+  const cargas = lsGetAllCargas();
+  if (cargas.length > 0) {
+    document.getElementById('tabs-nav').style.display = 'flex';
+    renderHistorial();
+    populateCompSelects();
+  }
+});
 </script>
 </body>
 </html>
+
 
