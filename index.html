@@ -92,12 +92,14 @@
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead tr { background: var(--bg3); }
   thead th { padding: 8px 6px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: normal; word-break: break-word; line-height: 1.25; vertical-align: bottom; }
+  thead th.num { text-align: center; }
   thead th.th-compact { text-align: center; max-width: 72px; min-width: 48px; font-size: 9px; }
   thead th.th-fixed { white-space: nowrap; }
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
   tbody tr:hover { background: var(--bg3); }
   tbody td { padding: 8px 6px; color: var(--text); }
-  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.num { text-align: center; font-variant-numeric: tabular-nums; }
+  thead th.th-num { text-align: center; }
   tbody td.muted { color: var(--text2); }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
   .pill.alto { background: rgba(248,113,113,0.15); color: var(--danger); }
@@ -149,11 +151,55 @@
   /* TOAST */
   #toast { position: fixed; bottom: 28px; right: 28px; background: var(--success); color: #000; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none; }
   #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* MODAL SELECCIÓN SECCIONES */
+  #modal-secciones { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; align-items: center; justify-content: center; }
+  #modal-secciones.open { display: flex; }
+  .modal-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .modal-box h2 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .modal-box p { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+  .modal-sections { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  .modal-sec-item { display: flex; align-items: center; gap: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .modal-sec-item:hover { border-color: var(--accent3); background: var(--bg4); }
+  .modal-sec-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .modal-sec-item label { font-size: 13px; color: var(--text); cursor: pointer; flex: 1; }
+  .modal-sec-item .sec-badge { font-size: 10px; color: var(--text3); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-modal-cancel { background: transparent; color: var(--text2); border: 1px solid var(--border2); padding: 9px 20px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+  .btn-modal-cancel:hover { background: var(--bg3); }
+  .btn-modal-ok { background: var(--accent); color: #fff; border: none; padding: 9px 22px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-modal-ok:hover { background: var(--accent2); }
+  .modal-selall { font-size: 11px; color: var(--accent3); cursor: pointer; text-decoration: underline; margin-bottom: 10px; display: inline-block; }
 </style>
 </head>
 <body>
 
 <div id="toast">✓ Copiado al portapapeles</div>
+
+<!-- MODAL SELECCIÓN DE SECCIONES PARA WORD -->
+<div id="modal-secciones">
+  <div class="modal-box">
+    <h2>📄 Generar Informe Word</h2>
+    <p>Selecciona las secciones que deseas incluir en el documento:</p>
+    <span class="modal-selall" onclick="toggleAllSections(true)">Seleccionar todo</span> &nbsp;·&nbsp;
+    <span class="modal-selall" onclick="toggleAllSections(false)">Deseleccionar todo</span>
+    <div class="modal-sections">
+      <div class="modal-sec-item"><input type="checkbox" id="sec-kpis" checked><label for="sec-kpis">📊 Indicadores Globales</label><span class="sec-badge">KPIs</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-org" checked><label for="sec-org">🏢 Por Organización de Ventas</label><span class="sec-badge">Tabla</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-graficas-centro" checked><label for="sec-graficas-centro">📈 Gráficas — Picking por Centro</label><span class="sec-badge">2 gráficas</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-graficas-plazo" checked><label for="sec-graficas-plazo">📈 Gráficas — Plazo de Entrega por Centro</label><span class="sec-badge">2 gráficas</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-graficas-costo" checked><label for="sec-graficas-costo">📈 Gráficas — Costo por Tipo de Transacción</label><span class="sec-badge">3 gráficas</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-tabla-plazo" checked><label for="sec-tabla-plazo">📋 Tabla Detalle — Plazo de Entrega por Centro</label><span class="sec-badge">Tabla</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-top-suc" checked><label for="sec-top-suc">🏆 Top 15 Sucursales por Costo Pendiente</label><span class="sec-badge">Tabla</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-cobertura" checked><label for="sec-cobertura">🔄 Cobertura de Abasto — OC y Traspasos</label><span class="sec-badge">Tabla</span></div>
+      <div class="modal-sec-item"><input type="checkbox" id="sec-acuerdos" checked><label for="sec-acuerdos">🤝 Acuerdos y Compromisos por Centro</label><span class="sec-badge">Cards</span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-modal-ok" onclick="confirmarDescarga()">⬇ Descargar</button>
+    </div>
+  </div>
+</div>
 
 <div id="loading">
   <div class="spinner"></div>
@@ -308,8 +354,9 @@
   </div>
   <div class="chart-card">
     <p style="font-size:11px;color:var(--text2);margin-bottom:12px;">
-      Por cada <strong style="color:var(--text)">Centro + Código</strong>, se toma el valor de OC/Traspaso tal como aparece en el renglón (sin sumar si el código se repite).
-      Se compara contra la <strong style="color:var(--text)">Cantidad Pendiente total</strong> del código en ese centro para calcular el % de cobertura.
+      Solo se incluyen renglones con <strong style="color:var(--text)">Cantidad Pendiente &gt; 0</strong> que tengan <strong style="color:var(--text)">OC o Traspaso registrado</strong>.
+      Por cada <strong style="color:var(--text)">Centro + Código</strong> se usa el valor <strong style="color:var(--text)">máximo</strong> de OC/Traspaso y de <strong style="color:var(--accent3)">Cantidad Propia</strong> (evita duplicar si el código se repite).
+      La columna <strong style="color:var(--accent3)">Cant. Propia cubre ✔/✗</strong> compara el máximo de <em>Cantidad Propia</em> contra la cantidad pendiente del código, indicando cuántos códigos por centro pueden abastecerse sin esperar OC o Traspaso.
     </p>
     <div class="filter-row">
       <label>Mostrar:</label>
@@ -528,11 +575,38 @@ function copyAllSections() {
 
 // ===== DOWNLOAD REPORT AS WORD-COMPATIBLE DOC =====
 function downloadReport() {
+  // Open section-selector modal instead of downloading immediately
+  document.getElementById('modal-secciones').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modal-secciones').classList.remove('open');
+}
+
+function toggleAllSections(state) {
+  ['sec-kpis','sec-org','sec-graficas-centro','sec-graficas-plazo','sec-graficas-costo',
+   'sec-tabla-plazo','sec-top-suc','sec-cobertura','sec-acuerdos'].forEach(id => {
+    document.getElementById(id).checked = state;
+  });
+}
+
+function confirmarDescarga() {
+  cerrarModal();
+  const secs = {
+    kpis:          document.getElementById('sec-kpis').checked,
+    org:           document.getElementById('sec-org').checked,
+    graficasCentro:document.getElementById('sec-graficas-centro').checked,
+    graficasPlazo: document.getElementById('sec-graficas-plazo').checked,
+    graficasCosto: document.getElementById('sec-graficas-costo').checked,
+    tablaPlayzo:   document.getElementById('sec-tabla-plazo').checked,
+    topSuc:        document.getElementById('sec-top-suc').checked,
+    cobertura:     document.getElementById('sec-cobertura').checked,
+    acuerdos:      document.getElementById('sec-acuerdos').checked,
+  };
   showToast('⏳ Generando informe ejecutivo...');
   setTimeout(() => {
     try {
-      const reportHtml = buildWordReport();
-      // Use application/msword MIME so Word/Outlook opens it natively
+      const reportHtml = buildWordReport(secs);
       const blob = new Blob([reportHtml], { type: 'application/vnd.ms-word;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -617,9 +691,23 @@ function captureChartsForExport() {
   return chartImages;
 }
 
-function buildWordReport() {
-  // Capture chart images with dark labels on white background (visible in Word/Outlook)
-  const chartImages = captureChartsForExport();
+function buildWordReport(secs = {}) {
+  // Default all sections to true if not specified
+  const inc = {
+    kpis: secs.kpis !== false,
+    org: secs.org !== false,
+    graficasCentro: secs.graficasCentro !== false,
+    graficasPlazo: secs.graficasPlazo !== false,
+    graficasCosto: secs.graficasCosto !== false,
+    tablaPlayzo: secs.tablaPlayzo !== false,
+    topSuc: secs.topSuc !== false,
+    cobertura: secs.cobertura !== false,
+    acuerdos: secs.acuerdos !== false,
+  };
+
+  // Only capture charts if at least one chart section is selected
+  const needCharts = inc.graficasCentro || inc.graficasPlazo || inc.graficasCosto;
+  const chartImages = needCharts ? captureChartsForExport() : {};
 
   const org = document.getElementById('filter-org').value || 'Todas las Org. de Ventas';
   const centro = document.getElementById('filter-centro').value || 'Todos los Centros';
@@ -789,19 +877,19 @@ function buildWordReport() {
 
 <div style="padding:20px 0;">
 
-<!-- INDICADORES GLOBALES -->
+${inc.kpis ? `<!-- INDICADORES GLOBALES -->
 <h2>&#9632; Indicadores Globales</h2>
 <table width="100%" cellpadding="0" cellspacing="4" style="border-collapse:separate;border-spacing:4px;">
   ${kpiTableRows}
-</table>
+</table>` : ''}
 
-<!-- ORG VENTAS -->
+${inc.org ? `<!-- ORG VENTAS -->
 <h2>&#9632; Por Organización de Ventas</h2>
 <table width="100%" cellpadding="0" cellspacing="0">
   <tr>${orgColsHtml}</tr>
-</table>
+</table>` : ''}
 
-<!-- GRÁFICAS: PEDIDOS Y COSTO POR CENTRO -->
+${inc.graficasCentro ? `<!-- GRÁFICAS: PEDIDOS Y COSTO POR CENTRO -->
 <h2>&#9632; Picking Pendiente por Centro</h2>
 <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
   <tr>
@@ -814,9 +902,9 @@ function buildWordReport() {
       ${chartImages['chartCostoCentro'] ? `<img src="${chartImages['chartCostoCentro']}" width="100%" alt="Costo por centro">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
     </td>
   </tr>
-</table>
+</table>` : ''}
 
-<!-- GRÁFICAS: PLAZO POR TIPO DE TRANSACCIÓN -->
+${inc.graficasPlazo ? `<!-- GRÁFICAS: PLAZO POR TIPO DE TRANSACCIÓN -->
 <h2>&#9632; Plazo de Entrega por Centro y Tipo de Transacción</h2>
 <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
   <tr>
@@ -829,9 +917,9 @@ function buildWordReport() {
       ${chartImages['chartPlazoVtas'] ? `<img src="${chartImages['chartPlazoVtas']}" width="100%" alt="VTAS Plazo">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
     </td>
   </tr>
-</table>
+</table>` : ''}
 
-<!-- GRÁFICAS: COSTO POR TRANSACCIÓN Y DISTRIBUCIÓN -->
+${inc.graficasCosto ? `<!-- GRÁFICAS: COSTO POR TRANSACCIÓN Y DISTRIBUCIÓN -->
 <h2>&#9632; Costo de Venta por Tipo de Transacción</h2>
 <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
   <tr>
@@ -846,30 +934,24 @@ function buildWordReport() {
       ${chartImages['chartOrgBar'] ? `<img src="${chartImages['chartOrgBar']}" width="100%" alt="Pedidos por org">` : ''}
     </td>
   </tr>
-</table>
+</table>` : ''}
 
-<!-- TABLA: PLAZO POR CENTRO -->
+${inc.tablaPlayzo ? `<!-- TABLA: PLAZO POR CENTRO -->
 <h2>&#9632; Tabla Detalle — Plazo de Entrega por Centro</h2>
-<div style="overflow:auto;">
-${plazoTableWord}
-</div>
+<div style="overflow:auto;">${plazoTableWord}</div>` : ''}
 
-<!-- TOP SUCURSALES -->
+${inc.topSuc ? `<!-- TOP SUCURSALES -->
 <h2>&#9632; Top 15 Sucursales por Costo de Venta Pendiente</h2>
-<div style="overflow:auto;">
-${sucTableWord}
-</div>
+<div style="overflow:auto;">${sucTableWord}</div>` : ''}
 
-<!-- COBERTURA OC / TRASPASOS -->
+${inc.cobertura ? `<!-- COBERTURA OC / TRASPASOS -->
 <h2>&#9632; Cobertura de Abasto — OC y Traspasos Activos por Centro</h2>
-<p style="font-size:9pt;color:#555;margin-bottom:8px;">Por Centro + Código: valor de OC/Traspaso único por código (sin sumatoria de renglones repetidos). % cobertura = (OC+Traspaso) / Cantidad Pendiente total del código.</p>
-<div style="overflow:auto;">
-${cobTableWord || '<p style="color:#aaa;font-size:9pt;">Sin datos de OC/Traspaso detectados en el archivo.</p>'}
-</div>
+<p style="font-size:9pt;color:#555;margin-bottom:8px;">Solo renglones con cantidad pendiente &gt; 0 y con OC o Traspaso activo. Por Centro+Código se usa el valor máximo de OC/Traspaso y de la columna <em>Cantidad Propia</em> (sin duplicar). La columna "Cant. Propia cubre ✔/✗" compara el máximo de Cantidad Propia contra la cantidad pendiente del código.</p>
+<div style="overflow:auto;">${cobTableWord || '<p style="color:#aaa;font-size:9pt;">Sin datos de OC/Traspaso detectados en el archivo.</p>'}</div>` : ''}
 
-<!-- ACUERDOS Y COMPROMISOS -->
+${inc.acuerdos ? `<!-- ACUERDOS Y COMPROMISOS -->
 <h2>&#9632; Acuerdos y Compromisos por Centro</h2>
-${acuerdosHtml}
+${acuerdosHtml}` : ''}
 
 </div>
 
@@ -903,10 +985,12 @@ function buildWordTable(tableEl, rowColors) {
     html += `<tr>`;
     const cells = row.querySelectorAll('th, td');
     cells.forEach(cell => {
-      const align = cell.classList.contains('num') ? 'right' : (cell.classList.contains('th-compact') ? 'center' : 'left');
-      // Strip pill badges — extract only text
-      let cellText = cell.textContent.trim().replace(/\s+/g,' ');
-      html += `<td style="background:${bg};color:${textColor};padding:6px 8px;border:1px solid #BDC3C7;text-align:${align};font-weight:${fontWeight};">${cellText}</td>`;
+      const isNum = cell.classList.contains('num') || cell.classList.contains('th-compact');
+      // Auto-detect numeric content if no class hint
+      const rawText = cell.textContent.trim().replace(/\s+/g,' ');
+      const looksNumeric = !isHeader && /^[\$\d\s\.,\-\%MK✔—]+$/.test(rawText.replace(/°|🥇|🥈|🥉/g,''));
+      const align = isNum || looksNumeric ? 'center' : 'left';
+      html += `<td style="background:${bg};color:${textColor};padding:6px 8px;border:1px solid #BDC3C7;text-align:${align};font-weight:${fontWeight};">${rawText}</td>`;
     });
     html += `</tr>`;
   });
@@ -990,7 +1074,7 @@ function buildReportHtml() {
   th.th-compact{text-align:center;max-width:68px;}
   tbody tr{border-bottom:1px solid var(--border);}
   tbody td{padding:7px 5px;color:var(--text);}
-  td.num{text-align:right;}
+  td.num{text-align:center;}
   td.muted{color:var(--text2);}
   .pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;}
   .pill.alto{background:rgba(248,113,113,0.15);color:#f87171;}
@@ -1435,8 +1519,15 @@ function renderPlazoTable() {
     centroMap[c].txs.add(tx);
   });
 
-  const allPlazos = [...new Set(subset.map(r => col(r,'Plazo de Entrega') || 'Sin dato'))].sort();
-  const rows = Object.entries(centroMap).sort((a,b) => b[1].total.size - a[1].total.size);
+  const allPlazosRaw = [...new Set(subset.map(r => col(r,'Plazo de Entrega') || 'Sin dato'))];
+
+  // Columnas de prioridad (van primero, en negrita)
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  // Separar en prioritarios y el resto (alfabético)
+  const priorityPlazos = PRIORITY_PLAZOS.filter(p => allPlazosRaw.includes(p));
+  const restPlazos = allPlazosRaw.filter(p => !PRIORITY_PLAZOS.includes(p)).sort();
+  const allPlazos = [...priorityPlazos, ...restPlazos];
 
   // Abreviaciones compactas para encabezados de columna
   const plazoAbrev = {
@@ -1456,12 +1547,13 @@ function renderPlazoTable() {
 
   function abrev(p) {
     if (plazoAbrev[p]) return plazoAbrev[p];
-    // Auto-abbreviate: break at spaces, max 2 words per line
     const words = p.split(' ');
     if (words.length <= 2) return p;
     const mid = Math.ceil(words.length / 2);
     return words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
   }
+
+  const rows = Object.entries(centroMap).sort((a,b) => b[1].total.size - a[1].total.size);
 
   let html = `<table style="table-layout:fixed;width:100%;"><thead><tr>
     <th class="th-fixed" style="width:110px;min-width:90px;">Centro</th>
@@ -1469,8 +1561,12 @@ function renderPlazoTable() {
     <th class="th-fixed" style="width:80px;">Trans.</th>`;
 
   allPlazos.forEach(p => {
+    const isPriority = PRIORITY_PLAZOS.includes(p);
     const label = abrev(p).replace(/\n/g, '<br>');
-    html += `<th class="th-compact" style="background:${plazoColor(p)}18;border-top:2px solid ${plazoColor(p)};">${label}</th>`;
+    const priorityStyle = isPriority
+      ? `background:${plazoColor(p)}28;border-top:3px solid ${plazoColor(p)};font-weight:800;color:${plazoColor(p)};`
+      : `background:${plazoColor(p)}18;border-top:2px solid ${plazoColor(p)};`;
+    html += `<th class="th-compact" style="${priorityStyle}">${isPriority ? '⚡ ' : ''}${label}</th>`;
   });
   html += `</tr></thead><tbody>`;
 
@@ -1483,13 +1579,32 @@ function renderPlazoTable() {
       <td style="text-align:center;"><span class="pill ${badge}">${fmt(total)}</span></td>
       <td class="muted" style="font-size:10px;">${txsShort}</td>`;
     allPlazos.forEach(p => {
+      const isPriority = PRIORITY_PLAZOS.includes(p);
       const v = d.plazos[p] ? d.plazos[p].size : 0;
       const color = v > 0 ? plazoColor(p) : 'var(--text3)';
-      html += `<td style="text-align:center;font-size:11px;font-weight:${v>0?'600':'400'};color:${color};">${v > 0 ? fmt(v) : '—'}</td>`;
+      const fontWeight = (v > 0 && isPriority) ? '800' : v > 0 ? '600' : '400';
+      const bgStyle = (v > 0 && isPriority) ? `background:${plazoColor(p)}12;` : '';
+      html += `<td style="text-align:center;font-size:11px;font-weight:${fontWeight};color:${color};${bgStyle}">${v > 0 ? fmt(v) : '—'}</td>`;
     });
     html += `</tr>`;
   });
+
   html += `</tbody></table>`;
+
+  // Leyenda de prioridad debajo de la tabla
+  if (priorityPlazos.length > 0) {
+    html += `<div style="margin-top:10px;padding:8px 12px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;">⚡ Columnas de prioridad:</span>`;
+    priorityPlazos.forEach(p => {
+      html += `<span style="display:flex;align-items:center;gap:5px;font-size:11px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:${plazoColor(p)};display:inline-block;"></span>
+        <strong style="color:${plazoColor(p)};">${p}</strong>
+        <span style="color:var(--text3);font-size:10px;">— Atención inmediata requerida</span>
+      </span>`;
+    });
+    html += `</div>`;
+  }
+
   document.getElementById('plazo-table').innerHTML = html;
 }
 
@@ -1511,7 +1626,7 @@ function renderTopSucursales() {
   let html = `<table><thead><tr>
     <th>#</th><th>Centro</th><th class="num">Pedidos<br>únicos</th><th class="num">Rengl.</th>
     <th class="num">Costo<br>Pendiente</th><th class="num">Cant.</th>
-    <th>KUMO /<br>VTAS</th><th>% del total</th>
+    <th class="num">KUMO /<br>VTAS</th><th>% del total</th>
   </tr></thead><tbody>`;
 
   sorted.forEach(([centro, d], i) => {
@@ -1524,7 +1639,7 @@ function renderTopSucursales() {
       <td class="num">${fmt(d.renglones)}</td>
       <td class="num" style="color:var(--accent);font-weight:600">${fmtM(d.costo)}</td>
       <td class="num">${fmt(d.cantidad)}</td>
-      <td style="font-size:11px"><span style="color:var(--kumo)">${fmt(d.kumo)}</span> / <span style="color:var(--vtas)">${fmt(d.vtas)}</span></td>
+      <td class="num" style="font-size:11px"><span style="color:var(--kumo)">${fmt(d.kumo)}</span> / <span style="color:var(--vtas)">${fmt(d.vtas)}</span></td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div style="flex:1;background:var(--border);height:6px;border-radius:3px;overflow:hidden">
@@ -1544,16 +1659,34 @@ function renderCoberturaOC() {
   const tipoFiltro = (document.getElementById('filter-cob-tipo')?.value) || 'all';
   const viewFiltro = (document.getElementById('filter-cob-view')?.value) || 'all';
 
-  // Para cada combinación Centro+Código:
-  // - Cantidad Pendiente total = suma real de todos los renglones del código en ese centro
-  // - OC = valor único del código en ese centro (se toma el primero no vacío, ya que se repite)
-  // - Traspaso = igual que OC
+  // PASO 1: Construir mapa de Cantidad Propia máxima por Centro+Código
+  // usando TODOS los renglones (sin filtro de OC/Traspaso), para reflejar
+  // la existencia real disponible del código en ese centro.
+  const tienePropia = FILTERED.length > 0 &&
+    Object.keys(FILTERED[0]).some(k => k.trim() === 'Cantidad Propia');
 
+  const propiaMaxMap = {}; // key: "centro||codigo" → número máximo de Cantidad Propia
+  if (tienePropia) {
+    FILTERED.forEach(r => {
+      const centro = col(r, 'Centro') || '(Sin centro)';
+      const codigo = col(r, 'Codigo') || col(r, 'Material') || col(r, 'Código') || col(r, 'Cod. Material') || col(r, 'Codigo Material') || '(Sin código)';
+      const pNum = parseFloat(col(r, 'Cantidad Propia')) || 0;
+      const key = centro + '||' + codigo;
+      if (!(key in propiaMaxMap) || pNum > propiaMaxMap[key]) {
+        propiaMaxMap[key] = pNum;
+      }
+    });
+  }
+
+  // PASO 2: Construir mapa de renglones con Cantidad Pendiente > 0 Y con OC o Traspaso
   const map = {}; // key: "centro||codigo"
   FILTERED.forEach(r => {
     const centro = col(r, 'Centro') || '(Sin centro)';
     const codigo = col(r, 'Codigo') || col(r, 'Material') || col(r, 'Código') || col(r, 'Cod. Material') || col(r, 'Codigo Material') || '(Sin código)';
     const cantPend = parseFloat(col(r, 'Cantidad Pendiente')) || 0;
+
+    // Solo renglones con cantidad pendiente > 0
+    if (cantPend <= 0) return;
 
     // OC — buscar columna con nombre que contenga "OC" o "Orden de Compra"
     let ocVal = '';
@@ -1571,16 +1704,20 @@ function renderCoberturaOC() {
 
     const ocNum = parseFloat(ocVal) || 0;
     const traspNum = parseFloat(traspVal) || 0;
+
+    // Solo incluir renglones que tengan al menos OC o Traspaso > 0
+    if (ocNum <= 0 && traspNum <= 0) return;
+
     const key = centro + '||' + codigo;
 
     if (!map[key]) {
-      map[key] = { centro, codigo, cantPend: 0, oc: 0, trasp: 0, ocRaw: '', traspRaw: '', renglones: 0 };
+      map[key] = { centro, codigo, cantPend: 0, oc: 0, trasp: 0, renglones: 0 };
     }
     map[key].cantPend += cantPend;
     map[key].renglones++;
-    // Valor único de OC/Traspaso por código: solo se asigna una vez (el primero no vacío)
-    if (map[key].oc === 0 && ocNum > 0) { map[key].oc = ocNum; map[key].ocRaw = ocVal; }
-    if (map[key].trasp === 0 && traspNum > 0) { map[key].trasp = traspNum; map[key].traspRaw = traspVal; }
+    // Valor máximo de OC/Traspaso por código+centro
+    if (ocNum > map[key].oc) map[key].oc = ocNum;
+    if (traspNum > map[key].trasp) map[key].trasp = traspNum;
   });
 
   // Detectar si hay columnas OC / Traspaso en los datos
@@ -1591,7 +1728,8 @@ function renderCoberturaOC() {
     document.getElementById('cobertura-oc-table').innerHTML =
       `<p style="color:var(--text2);font-size:12px;padding:12px 0;">
         ⚠️ No se detectaron columnas de <strong>OC</strong> o <strong>Traspaso</strong> en el archivo cargado.<br>
-        Verifica que el Excel incluya columnas con esos nombres (ej: <em>Cantidad OC</em>, <em>Num Traspaso</em>, <em>Orden de Compra</em>, etc.).
+        Verifica que el Excel incluya columnas con esos nombres (ej: <em>Cantidad OC</em>, <em>Num Traspaso</em>, <em>Orden de Compra</em>, etc.).<br>
+        <em style="color:var(--text3)">Nota: Solo se analizan renglones con cantidad pendiente > 0 que cuenten con OC o Traspaso registrado.</em>
       </p>`;
     return;
   }
@@ -1600,14 +1738,19 @@ function renderCoberturaOC() {
   const byCentro = {};
   Object.values(map).forEach(d => {
     if (!byCentro[d.centro]) {
-      byCentro[d.centro] = { centro: d.centro, codigos: [], cantTotal: 0, ocTotal: 0, traspTotal: 0, cubTotal: 0 };
+      byCentro[d.centro] = { centro: d.centro, codigos: [], cantTotal: 0, ocTotal: 0, traspTotal: 0, renglonesTotal: 0 };
     }
     const cobertura = tipoFiltro === 'oc' ? d.oc : tipoFiltro === 'traspaso' ? d.trasp : (d.oc + d.trasp);
     const pct = d.cantPend > 0 ? Math.min(100, (cobertura / d.cantPend) * 100) : 0;
-    byCentro[d.centro].codigos.push({ ...d, cobertura, pct });
+    // Cantidad Propia máxima buscada desde el mapa global (todos los renglones del código en ese centro)
+    const key = d.centro + '||' + d.codigo;
+    const propiaMaxVal = tienePropia ? (propiaMaxMap[key] || 0) : null;
+    const propiaCubre = tienePropia ? (propiaMaxVal >= d.cantPend) : null;
+    byCentro[d.centro].codigos.push({ ...d, cobertura, pct, propiaCubre, propiaMaxVal });
     byCentro[d.centro].cantTotal += d.cantPend;
     byCentro[d.centro].ocTotal += d.oc;
     byCentro[d.centro].traspTotal += d.trasp;
+    byCentro[d.centro].renglonesTotal += d.renglones;
   });
 
   // Calcular métricas de cobertura por centro
@@ -1617,8 +1760,14 @@ function renderCoberturaOC() {
     const codsConCob = c.codigos.filter(x => x.pct >= 100).length;
     const codsSinCob = c.codigos.filter(x => x.pct === 0).length;
     const codsParcial = c.codigos.filter(x => x.pct > 0 && x.pct < 100).length;
-    return { ...c, cobTotal, pctGlobal, codsConCob, codsSinCob, codsParcial, totalCods: c.codigos.length };
-  }).sort((a, b) => b.cantTotal - a.cantTotal);
+    // Cuántos códigos la existencia propia cubre completamente
+    const propiaCodsOk = tienePropia ? c.codigos.filter(x => x.propiaCubre === true).length : null;
+    const propiaCodsFail = tienePropia ? c.codigos.filter(x => x.propiaCubre === false).length : null;
+    return {
+      ...c, cobTotal, pctGlobal, codsConCob, codsSinCob, codsParcial,
+      totalCods: c.codigos.length, propiaCodsOk, propiaCodsFail
+    };
+  }).sort((a, b) => b.renglonesTotal - a.renglonesTotal);
 
   // Filtrar según viewFiltro
   const filtered = centroRows.filter(c => {
@@ -1640,12 +1789,13 @@ function renderCoberturaOC() {
   let html = `<table>
     <thead><tr>
       <th>Centro</th>
-      <th class="num">Códigos<br>únicos</th>
+      <th class="num">Renglones<br>afectados</th>
       <th class="num">Cant.<br>Pendiente</th>
       ${showOC ? `<th class="num">Cant.<br>OC</th>` : ''}
       ${showTrasp ? `<th class="num">Cant.<br>Traspaso</th>` : ''}
-      <th class="num">Cobertura<br>Total</th>
+      <th class="num">Cobertura<br>OC+Trsp.</th>
       <th class="num">% Cobertura</th>
+      ${tienePropia ? `<th class="num" style="color:var(--accent3)" title="Columna 'Cantidad Propia': valor máximo por Código+Centro. ✔ = cubre la cantidad pendiente, ✗ = no alcanza">Cant. Propia<br>cubre ✔/✗</th>` : ''}
       <th class="num" style="color:var(--success)">Cods.<br>100%</th>
       <th class="num" style="color:var(--warn)">Cods.<br>Parcial</th>
       <th class="num" style="color:var(--danger)">Cods.<br>Sin cob.</th>
@@ -1661,14 +1811,23 @@ function renderCoberturaOC() {
         ? `<span style="color:var(--warn);font-weight:700">${pct}%</span>`
         : `<span style="color:var(--danger);font-weight:700">—&nbsp;0%</span>`;
 
+    const propiaCell = tienePropia
+      ? `<td class="num" style="font-size:11px;">
+          <span style="color:var(--success);font-weight:600">${fmt(c.propiaCodsOk)} ✔</span>
+          &nbsp;/&nbsp;
+          <span style="color:var(--danger);font-weight:600">${fmt(c.propiaCodsFail)} ✗</span>
+         </td>`
+      : '';
+
     html += `<tr>
       <td style="font-weight:700;color:var(--accent3)">${c.centro}</td>
-      <td class="num">${fmt(c.totalCods)}</td>
+      <td class="num"><span style="color:var(--accent);font-weight:700">${fmt(c.renglonesTotal)}</span></td>
       <td class="num">${fmt(c.cantTotal)}</td>
       ${showOC ? `<td class="num" style="color:var(--kumo)">${c.ocTotal > 0 ? fmt(c.ocTotal) : '—'}</td>` : ''}
       ${showTrasp ? `<td class="num" style="color:var(--vtas)">${c.traspTotal > 0 ? fmt(c.traspTotal) : '—'}</td>` : ''}
       <td class="num" style="font-weight:600">${fmt(c.cobTotal)}</td>
       <td class="num">${pctText}</td>
+      ${propiaCell}
       <td class="num"><span style="color:var(--success);font-weight:600">${c.codsConCob}</span></td>
       <td class="num"><span style="color:var(--warn);font-weight:600">${c.codsParcial > 0 ? c.codsParcial : '—'}</span></td>
       <td class="num"><span style="color:var(--danger);font-weight:600">${c.codsSinCob > 0 ? c.codsSinCob : '—'}</span></td>
@@ -1788,3 +1947,4 @@ function renderAcuerdos() {
 </script>
 </body>
 </html>
+
