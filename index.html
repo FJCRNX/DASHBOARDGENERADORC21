@@ -285,7 +285,7 @@
     <div class="header-logo">GK</div>
     <div>
       <h1>Dashboard Picking Pendiente</h1>
-      <div class="subtitle">Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS "Creado por: Francisco Javier Cerezo Ramos"</div>
+      <div class="subtitle">Análisis operativo y comercial · VA05 "Creado por: Francisco Javier Cerezo Ramos"</div>
     </div>
   </div>
   <div class="badge-date" id="badge-date">Sin datos cargados</div>
@@ -1170,7 +1170,7 @@ function buildWordReport(secs = {}) {
           </td>
           <td style="padding-left:16px;">
             <div style="font-size:20pt;font-weight:bold;color:#fff;">Informe Ejecutivo — Picking Pendiente</div>
-            <div style="font-size:10pt;color:#BDC3C7;margin-top:2px;">Análisis operativo y comercial · VA05 · Francisco Javier Cerezo Ramos</div>
+            <div style="font-size:10pt;color:#BDC3C7;margin-top:2px;">Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS · Francisco Javier Cerezo Ramos</div>
           </td>
         </tr>
       </table>
@@ -1417,7 +1417,7 @@ function buildReportHtml() {
     <div class="logo">GK</div>
     <div>
       <h1>Reporte Picking Pendiente</h1>
-      <p>Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS · Autor: Francisco Javier Cerezo Ramos</p>
+      <p>Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS · Francisco Javier Cerezo Ramos</p>
     </div>
   </div>
   <div class="filter-badge">
@@ -2328,50 +2328,78 @@ function loadCargaIntoDashboard(key) {
   const carga = cargas.find(c => c.key === key);
   if (!carga || !carga.centroData) { showToast('⚠️ No se encontraron datos para esta carga'); return; }
 
-  // Reconstruir RAW sintético desde el snapshot centroData
-  // Cada entrada de centroData contiene pedidos, renglones, costo, cantidad, plazos, kumo, vtas
+  // Reconstruir RAW sintético desde el snapshot centroData.
+  // El snapshot guarda por centro:
+  //   pedidos   = pedidos únicos (Set.size)
+  //   renglones = total de filas (no pedidos)
+  //   costo     = suma de costo
+  //   cantidad  = suma de cantidad
+  //   plazos    = { plazo: nPedidosUnicosConEsePlazo }  ← OJO: son PEDIDOS, no renglones
+  //   kumo/vtas = renglones de cada tx
+  //
+  // Estrategia de reconstrucción:
+  //  1. Generar exactamente d.renglones filas por centro.
+  //  2. Asignar pedidos únicos: d.pedidos strings distintos, repartidos
+  //     de forma que cada pedido tenga ≥1 renglón (renglones / pedidos).
+  //  3. Plazo: distribuir proporcionalmente según pesos del snapshot.
+  //  4. Transaccion: primeros d.kumo renglones = KUMO, resto = ZVA05VTAS.
+  //  5. Costo y cantidad: valor promedio por renglón (d.costo / d.renglones).
+
   const syntheticRows = [];
+
   Object.entries(carga.centroData).forEach(([centro, d]) => {
+    const nRenglones = d.renglones || 0;
+    const nPedidos   = d.pedidos   || 1;
+    const costoPorRenglon    = nRenglones > 0 ? d.costo    / nRenglones : 0;
+    const cantidadPorRenglon = nRenglones > 0 ? d.cantidad / nRenglones : 0;
+    const org = carga.orgData?.[centro] || 'ORG-GK';
+
+    if (nRenglones === 0) return;
+
+    // --- Construir array de pedidos únicos para este centro ---
+    // Cada pedido recibe aprox (nRenglones / nPedidos) renglones.
     const pedidosArr = [];
-    for (let i = 0; i < d.pedidos; i++) pedidosArr.push(`PED-${centro}-${i+1}`);
+    for (let i = 0; i < nPedidos; i++) pedidosArr.push(`SYN-${centro}-${i + 1}`);
 
-    // Por cada plazo, generar renglones proporcionales
-    const plazoKeys = Object.keys(d.plazos || {});
-    let renglonesGenerados = 0;
+    // --- Distribución de plazos proporcional a renglones ---
+    // plazos[p] = pedidos únicos con ese plazo → usamos como peso relativo
+    const plazoEntries = Object.entries(d.plazos || {});
+    const sumPesosPlazos = plazoEntries.reduce((s, [, v]) => s + v, 0) || 1;
 
-    plazoKeys.forEach(plazo => {
-      const pedsPlazo = d.plazos[plazo];
-      for (let i = 0; i < pedsPlazo; i++) {
-        const pedNum = pedidosArr[i % pedidosArr.length] || `PED-${centro}-${i}`;
-        const tx = (i % (d.kumo + d.vtas || 1)) < d.kumo ? 'KUMO ENTREGAS' : 'ZVA05VTAS';
+    // Asignar cuántos renglones va a tener cada plazo (proporcional, sumando exactamente nRenglones)
+    let plazoRenglones = [];
+    let asignados = 0;
+    plazoEntries.forEach(([plazo, peso], idx) => {
+      const esUltimo = idx === plazoEntries.length - 1;
+      const n = esUltimo
+        ? nRenglones - asignados
+        : Math.round((peso / sumPesosPlazos) * nRenglones);
+      plazoRenglones.push({ plazo, n: Math.max(0, n) });
+      asignados += n;
+    });
+    // Si no hay plazos, poner todos bajo 'Sin dato'
+    if (plazoRenglones.length === 0) plazoRenglones.push({ plazo: 'Sin dato', n: nRenglones });
+
+    // --- Generar renglones ---
+    let rengIdx = 0;
+    plazoRenglones.forEach(({ plazo, n }) => {
+      for (let i = 0; i < n; i++) {
+        // Asignar pedido: repartir renglones entre pedidos únicos de forma uniforme
+        const pedNum = pedidosArr[rengIdx % nPedidos];
+        // Asignar transacción: los primeros d.kumo renglones son KUMO, el resto ZVA05VTAS
+        const tx = rengIdx < d.kumo ? 'KUMO ENTREGAS' : 'ZVA05VTAS';
         syntheticRows.push({
           'Centro': centro,
           'Numero de Pedido': pedNum,
           'Plazo de Entrega': plazo,
           'Transaccion': tx,
-          'Organizacion de Ventas': carga.orgData?.[centro] || 'ORG-GK',
-          'Costo de Venta Contable Pendiente': d.costo / Math.max(d.renglones, 1),
-          'Cantidad Pendiente': d.cantidad / Math.max(d.renglones, 1),
+          'Organizacion de Ventas': org,
+          'Costo de Venta Contable Pendiente': costoPorRenglon,
+          'Cantidad Pendiente': cantidadPorRenglon,
         });
-        renglonesGenerados++;
+        rengIdx++;
       }
     });
-
-    // Si faltan renglones (sin plazos o diferencia), completar con datos globales del centro
-    const faltan = d.renglones - renglonesGenerados;
-    for (let i = 0; i < faltan; i++) {
-      const pedNum = pedidosArr[i % pedidosArr.length] || `PED-${centro}-X${i}`;
-      const tx = i < d.kumo ? 'KUMO ENTREGAS' : 'ZVA05VTAS';
-      syntheticRows.push({
-        'Centro': centro,
-        'Numero de Pedido': pedNum,
-        'Plazo de Entrega': 'Sin dato',
-        'Transaccion': tx,
-        'Organizacion de Ventas': carga.orgData?.[centro] || 'ORG-GK',
-        'Costo de Venta Contable Pendiente': d.costo / Math.max(d.renglones, 1),
-        'Cantidad Pendiente': d.cantidad / Math.max(d.renglones, 1),
-      });
-    }
   });
 
   RAW = syntheticRows;
@@ -2392,12 +2420,13 @@ function loadCargaIntoDashboard(key) {
   oSel.innerHTML = '<option value="">Todas las Org. Ventas</option>';
   cSel.innerHTML = '<option value="">Todos los Centros</option>';
   const orgs = [...new Set(RAW.map(r => col(r,'Organizacion de Ventas')))].filter(Boolean).sort();
-  const centros = [...new Set(RAW.map(r => col(r,'Centro')))].filter(Boolean).sort();
+  const centros2 = [...new Set(RAW.map(r => col(r,'Centro')))].filter(Boolean).sort();
   orgs.forEach(o => oSel.appendChild(new Option(o, o)));
-  centros.forEach(c => cSel.appendChild(new Option(c, c)));
+  centros2.forEach(c => cSel.appendChild(new Option(c, c)));
 
   renderAll();
   switchTab('dashboard-tab');
+
   showToast('📊 Dashboard cargado: ' + CURRENT_FILENAME);
 }
 
@@ -2551,22 +2580,30 @@ function sumCentros(centros, field) {
 }
 
 function renderCompKPIs(cA, cB, centroFiltro, centrosA, centrosB) {
-  // Compute totals directly from the (already filtered) centros objects
   function sumC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
-  function countC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
 
-  const pedA = sumC(centrosA, 'pedidos');
-  const pedB = sumC(centrosB, 'pedidos');
-  const renA = sumC(centrosA, 'renglones');
-  const renB = sumC(centrosB, 'renglones');
-  const cosA = sumC(centrosA, 'costo');
-  const cosB = sumC(centrosB, 'costo');
-  const canA = sumC(centrosA, 'cantidad');
-  const canB = sumC(centrosB, 'cantidad');
-  const kuA = sumC(centrosA, 'kumo');
-  const kuB = sumC(centrosB, 'kumo');
-  const vtA = sumC(centrosA, 'vtas');
-  const vtB = sumC(centrosB, 'vtas');
+  const centrosFiltrados = Object.keys(centrosA).length !== Object.keys(cA.centroData || {}).length
+    || Object.keys(centrosB).length !== Object.keys(cB.centroData || {}).length;
+
+  // Pedidos únicos: cuando es vista global sin filtros, usar el total deduplicado del snapshot
+  // raíz (totalPedidos). Cuando hay filtro de centro/org, sumar por centros filtrados es correcto
+  // porque cada centroData[c].pedidos ya es el conteo de pedidos únicos de ese centro.
+  const pedA = centrosFiltrados ? sumC(centrosA, 'pedidos') : (cA.totalPedidos || sumC(centrosA, 'pedidos'));
+  const pedB = centrosFiltrados ? sumC(centrosB, 'pedidos') : (cB.totalPedidos || sumC(centrosB, 'pedidos'));
+
+  // Renglones: suma directa siempre es correcta (un renglon = una fila, no se duplican)
+  const renA = centrosFiltrados ? sumC(centrosA, 'renglones') : (cA.totalRenglones || sumC(centrosA, 'renglones'));
+  const renB = centrosFiltrados ? sumC(centrosB, 'renglones') : (cB.totalRenglones || sumC(centrosB, 'renglones'));
+
+  // Costo, cantidad, kumo, vtas: suma directa por centro siempre correcta
+  const cosA = centrosFiltrados ? sumC(centrosA, 'costo') : (cA.totalCosto || sumC(centrosA, 'costo'));
+  const cosB = centrosFiltrados ? sumC(centrosB, 'costo') : (cB.totalCosto || sumC(centrosB, 'costo'));
+  const canA = centrosFiltrados ? sumC(centrosA, 'cantidad') : (cA.totalCantidad || sumC(centrosA, 'cantidad'));
+  const canB = centrosFiltrados ? sumC(centrosB, 'cantidad') : (cB.totalCantidad || sumC(centrosB, 'cantidad'));
+  const kuA = centrosFiltrados ? sumC(centrosA, 'kumo') : (cA.kumo || sumC(centrosA, 'kumo'));
+  const kuB = centrosFiltrados ? sumC(centrosB, 'kumo') : (cB.kumo || sumC(centrosB, 'kumo'));
+  const vtA = centrosFiltrados ? sumC(centrosA, 'vtas') : (cA.vtas || sumC(centrosA, 'vtas'));
+  const vtB = centrosFiltrados ? sumC(centrosB, 'vtas') : (cB.vtas || sumC(centrosB, 'vtas'));
 
   const kpis = [
     { label: 'Pedidos únicos', a: pedA, b: pedB, fmt: fmt, inv: true },
@@ -2646,7 +2683,15 @@ function renderCompPlazoTable(cA, cB, centrosA, centrosB) {
     ...rawPlazos.filter(p => !PRIORITY_PLAZOS.includes(p)).sort()
   ];
 
-  const allCentros = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])].sort();
+  // Ordenar centros: de mayor mejora (Δ% más negativo) a mayor deterioro (Δ% más positivo)
+  const allCentrosRaw = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])];
+  const allCentros = allCentrosRaw.sort((a, b) => {
+    const dAa = centrosA[a] || {}, dBa = centrosB[a] || {};
+    const dAb = centrosA[b] || {}, dBb = centrosB[b] || {};
+    const pctA = (dAa.pedidos||0) > 0 ? ((dBa.pedidos||0) - (dAa.pedidos||0)) / (dAa.pedidos||0) : ((dBa.pedidos||0) > 0 ? 1 : 0);
+    const pctB = (dAb.pedidos||0) > 0 ? ((dBb.pedidos||0) - (dAb.pedidos||0)) / (dAb.pedidos||0) : ((dBb.pedidos||0) > 0 ? 1 : 0);
+    return pctA - pctB;
+  });
 
   let html = `<table><thead><tr>
     <th>Centro</th>
@@ -2694,59 +2739,80 @@ function renderCompPlazoTable(cA, cB, centrosA, centrosB) {
 }
 
 function renderCompSucursalTable(cA, cB, centrosA, centrosB) {
-  const allCentros = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])].sort();
   const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  // Calcular datos de todos los centros con su Δ%
+  const allCentrosRaw = [...new Set([...Object.keys(centrosA), ...Object.keys(centrosB)])];
+  const centroItems = allCentrosRaw.map(c => {
+    const dA = centrosA[c] || {};
+    const dB = centrosB[c] || {};
+    const pedA = dA.pedidos || 0, pedB = dB.pedidos || 0;
+    const cosA = dA.costo || 0, cosB = dB.costo || 0;
+    const pedDiff = pedA > 0 ? ((pedB - pedA) / pedA * 100) : (pedB > 0 ? 100 : 0);
+    const cosDiff = cosA > 0 ? ((cosB - cosA) / cosA * 100) : null;
+    const inmA = dA.plazos?.['ENTREGA INMEDIATA'] || 0;
+    const inmB = dB.plazos?.['ENTREGA INMEDIATA'] || 0;
+    const domA = dA.plazos?.['ENVÍO A DOMICILIO'] || 0;
+    const domB = dB.plazos?.['ENVÍO A DOMICILIO'] || 0;
+    return { c, dA, dB, pedA, pedB, cosA, cosB, pedDiff, cosDiff, inmA, inmB, domA, domB };
+  });
+
+  // Ordenar de mayor mejora (Δ% más negativo) a mayor deterioro (más positivo)
+  centroItems.sort((a, b) => a.pedDiff - b.pedDiff);
+
+  const totalItems = centroItems.length;
 
   let html = `<table><thead><tr>
     <th>Centro / Sucursal</th>
     <th class="num">Pedidos A</th>
     <th class="num">Pedidos B</th>
-    <th class="num">Δ%</th>
+    <th class="num">Δ% Pedidos</th>
     <th class="num">Costo A</th>
     <th class="num">Costo B</th>
     <th class="num">Δ% Costo</th>
     <th class="num">Inmed. A→B</th>
-    <th class="num">Domicilio A→B</th>
+    <th class="num">Dom. A→B</th>
     <th>Diagnóstico</th>
   </tr></thead><tbody>`;
 
-  allCentros.forEach(c => {
-    const dA = centrosA[c] || {};
-    const dB = centrosB[c] || {};
-    const pedA = dA.pedidos || 0, pedB = dB.pedidos || 0;
-    const cosA = dA.costo || 0, cosB = dB.costo || 0;
-    const pedDiff = pedA > 0 ? ((pedB - pedA) / pedA * 100).toFixed(1) : null;
-    const cosDiff = cosA > 0 ? ((cosB - cosA) / cosA * 100).toFixed(1) : null;
-    const inmA = dA.plazos?.['ENTREGA INMEDIATA'] || 0;
-    const inmB = dB.plazos?.['ENTREGA INMEDIATA'] || 0;
-    const domA = dA.plazos?.['ENVÍO A DOMICILIO'] || 0;
-    const domB = dB.plazos?.['ENVÍO A DOMICILIO'] || 0;
+  centroItems.forEach(({ c, pedA, pedB, cosA, cosB, pedDiff, cosDiff, inmA, inmB, domA, domB }, idx) => {
+    const pedDiffStr = pedA > 0 ? pedDiff.toFixed(1) : null;
+    const cosDiffStr = cosDiff !== null ? cosDiff.toFixed(1) : null;
 
-    const pedColor = pedDiff !== null ? (parseFloat(pedDiff) < 0 ? 'var(--success)' : parseFloat(pedDiff) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
-    const cosColor = cosDiff !== null ? (parseFloat(cosDiff) < 0 ? 'var(--success)' : parseFloat(cosDiff) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
+    const pedColor = pedDiffStr !== null ? (parseFloat(pedDiffStr) < 0 ? 'var(--success)' : parseFloat(pedDiffStr) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
+    const cosColor = cosDiffStr !== null ? (parseFloat(cosDiffStr) < 0 ? 'var(--success)' : parseFloat(cosDiffStr) > 0 ? 'var(--danger)' : 'var(--text3)') : 'var(--text3)';
 
-    // Diagnóstico automático
-    const diags = [];
-    if (pedDiff !== null) {
-      if (parseFloat(pedDiff) <= -20) diags.push(`<span style="color:var(--success)">✅ Reducción significativa de pedidos (${pedDiff}%)</span>`);
-      else if (parseFloat(pedDiff) >= 20) diags.push(`<span style="color:var(--danger)">🔴 Aumento crítico de pedidos (+${pedDiff}%)</span>`);
-      else if (parseFloat(pedDiff) < 0) diags.push(`<span style="color:var(--success)">📉 Leve mejora en pedidos (${pedDiff}%)</span>`);
-      else if (parseFloat(pedDiff) > 0) diags.push(`<span style="color:var(--warn)">⚠️ Incremento en pedidos (+${pedDiff}%)</span>`);
+    // Icono de tendencia según posición en el ranking
+    const tercio = Math.floor(totalItems / 3) || 1;
+    let tendIcon = '';
+    if (pedA > 0) {
+      if (idx < tercio) tendIcon = '<span style="color:var(--success);font-size:13px;" title="Mejor mejora">▼</span> ';
+      else if (idx >= totalItems - tercio) tendIcon = '<span style="color:var(--danger);font-size:13px;" title="Mayor deterioro">▲</span> ';
+      else tendIcon = '<span style="color:var(--warn);font-size:11px;" title="Estable">◆</span> ';
     }
-    if (inmB > inmA) diags.push(`<span style="color:var(--warn)">⚡ Más pendientes de entrega inmediata (+${fmt(inmB-inmA)})</span>`);
-    else if (inmB < inmA) diags.push(`<span style="color:var(--success)">⚡ Menos inmediatas pendientes (${fmt(inmA-inmB)} resueltas)</span>`);
-    if (domB > domA) diags.push(`<span style="color:var(--warn)">🏠 Más envíos a domicilio pendientes (+${fmt(domB-domA)})</span>`);
-    if (cosDiff !== null && parseFloat(cosDiff) <= -15) diags.push(`<span style="color:var(--success)">💰 Costo pendiente mejoró significativamente (${cosDiff}%)</span>`);
+
+    const diags = [];
+    if (pedDiffStr !== null) {
+      if (parseFloat(pedDiffStr) <= -20) diags.push(`<span style="color:var(--success)">✅ Reducción significativa (${pedDiffStr}%)</span>`);
+      else if (parseFloat(pedDiffStr) >= 20) diags.push(`<span style="color:var(--danger)">🔴 Aumento crítico (+${pedDiffStr}%)</span>`);
+      else if (parseFloat(pedDiffStr) < 0) diags.push(`<span style="color:var(--success)">📉 Leve mejora (${pedDiffStr}%)</span>`);
+      else if (parseFloat(pedDiffStr) > 0) diags.push(`<span style="color:var(--warn)">⚠️ Incremento (+${pedDiffStr}%)</span>`);
+      else diags.push(`<span style="color:var(--text3)">= Sin cambio en pedidos</span>`);
+    }
+    if (inmB > inmA) diags.push(`<span style="color:var(--warn)">⚡ Más inmediatas (+${fmt(inmB-inmA)})</span>`);
+    else if (inmB < inmA) diags.push(`<span style="color:var(--success)">⚡ Menos inmediatas (${fmt(inmA-inmB)} resueltas)</span>`);
+    if (domB > domA) diags.push(`<span style="color:var(--warn)">🏠 Más domicilio (+${fmt(domB-domA)})</span>`);
+    if (cosDiffStr !== null && parseFloat(cosDiffStr) <= -15) diags.push(`<span style="color:var(--success)">💰 Costo mejoró (${cosDiffStr}%)</span>`);
     if (diags.length === 0) diags.push('<span style="color:var(--text3)">— Sin cambios relevantes</span>');
 
     html += `<tr>
-      <td style="font-weight:700;color:var(--accent3);font-size:12px;">${c}</td>
+      <td style="font-weight:700;color:var(--accent3);font-size:12px;">${tendIcon}${c}</td>
       <td class="num" style="color:var(--kumo)">${fmt(pedA)}</td>
       <td class="num" style="color:var(--vtas)">${fmt(pedB)}</td>
-      <td class="num" style="color:${pedColor};font-weight:700;">${pedDiff !== null ? (parseFloat(pedDiff) >= 0 ? '+' : '') + pedDiff + '%' : '—'}</td>
+      <td class="num" style="color:${pedColor};font-weight:700;">${pedDiffStr !== null ? (parseFloat(pedDiffStr) >= 0 ? '+' : '') + pedDiffStr + '%' : '—'}</td>
       <td class="num" style="color:var(--kumo)">${fmtM(cosA)}</td>
       <td class="num" style="color:var(--vtas)">${fmtM(cosB)}</td>
-      <td class="num" style="color:${cosColor};font-weight:700;">${cosDiff !== null ? (parseFloat(cosDiff) >= 0 ? '+' : '') + cosDiff + '%' : '—'}</td>
+      <td class="num" style="color:${cosColor};font-weight:700;">${cosDiffStr !== null ? (parseFloat(cosDiffStr) >= 0 ? '+' : '') + cosDiffStr + '%' : '—'}</td>
       <td class="num" style="font-size:11px;">${inmA > 0 || inmB > 0 ? fmt(inmA) + '→' + fmt(inmB) : '—'}</td>
       <td class="num" style="font-size:11px;">${domA > 0 || domB > 0 ? fmt(domA) + '→' + fmt(domB) : '—'}</td>
       <td style="font-size:11px;min-width:200px;">${diags.join('<br>')}</td>
@@ -2790,12 +2856,21 @@ function buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, o
 
   function sumC(centros, field) { return Object.values(centros).reduce((s, d) => s + (d[field] || 0), 0); }
 
-  const pedA = sumC(centrosA,'pedidos'), pedB = sumC(centrosB,'pedidos');
-  const renA = sumC(centrosA,'renglones'), renB = sumC(centrosB,'renglones');
-  const cosA = sumC(centrosA,'costo'), cosB = sumC(centrosB,'costo');
-  const canA = sumC(centrosA,'cantidad'), canB = sumC(centrosB,'cantidad');
-  const kuA = sumC(centrosA,'kumo'), kuB = sumC(centrosB,'kumo');
-  const vtA = sumC(centrosA,'vtas'), vtB = sumC(centrosB,'vtas');
+  const filtrados = Object.keys(centrosA).length !== Object.keys(cA.centroData || {}).length
+    || Object.keys(centrosB).length !== Object.keys(cB.centroData || {}).length;
+
+  const pedA = filtrados ? sumC(centrosA,'pedidos') : (cA.totalPedidos || sumC(centrosA,'pedidos'));
+  const pedB = filtrados ? sumC(centrosB,'pedidos') : (cB.totalPedidos || sumC(centrosB,'pedidos'));
+  const renA = filtrados ? sumC(centrosA,'renglones') : (cA.totalRenglones || sumC(centrosA,'renglones'));
+  const renB = filtrados ? sumC(centrosB,'renglones') : (cB.totalRenglones || sumC(centrosB,'renglones'));
+  const cosA = filtrados ? sumC(centrosA,'costo') : (cA.totalCosto || sumC(centrosA,'costo'));
+  const cosB = filtrados ? sumC(centrosB,'costo') : (cB.totalCosto || sumC(centrosB,'costo'));
+  const canA = filtrados ? sumC(centrosA,'cantidad') : (cA.totalCantidad || sumC(centrosA,'cantidad'));
+  const canB = filtrados ? sumC(centrosB,'cantidad') : (cB.totalCantidad || sumC(centrosB,'cantidad'));
+  const kuA  = filtrados ? sumC(centrosA,'kumo') : (cA.kumo || sumC(centrosA,'kumo'));
+  const kuB  = filtrados ? sumC(centrosB,'kumo') : (cB.kumo || sumC(centrosB,'kumo'));
+  const vtA  = filtrados ? sumC(centrosA,'vtas') : (cA.vtas || sumC(centrosA,'vtas'));
+  const vtB  = filtrados ? sumC(centrosB,'vtas') : (cB.vtas || sumC(centrosB,'vtas'));
 
   function diffPct(a, b) { return a > 0 ? ((b-a)/a*100).toFixed(1) : '—'; }
   function diffColor(a, b, invert) {
@@ -2832,7 +2907,15 @@ function buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, o
   const allPlazosSet = new Set();
   Object.values({...centrosA,...centrosB}).forEach(d => { if(d.plazos) Object.keys(d.plazos).forEach(p => allPlazosSet.add(p)); });
   const plazosCols = [...PRIORITY_PLAZOS.filter(p=>allPlazosSet.has(p)), ...[...allPlazosSet].filter(p=>!PRIORITY_PLAZOS.includes(p)).sort()];
-  const allCentros = [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])].sort();
+  // Ordenar centros de mayor mejora a mayor deterioro (igual que en pantalla)
+  const allCentrosRaw = [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])];
+  const allCentros = allCentrosRaw.sort((a, b) => {
+    const pAa = centrosA[a]?.pedidos||0, pBa = centrosB[a]?.pedidos||0;
+    const pAb = centrosA[b]?.pedidos||0, pBb = centrosB[b]?.pedidos||0;
+    const dA = pAa > 0 ? (pBa-pAa)/pAa : (pBa>0?1:0);
+    const dB = pAb > 0 ? (pBb-pAb)/pAb : (pBb>0?1:0);
+    return dA - dB;
+  });
 
   const plazoHeaderCols = plazosCols.map(p => `<th style="padding:5px 6px;text-align:center;font-size:8pt;background:#1F3864;color:#fff;max-width:60px;">${p.length>10?p.slice(0,9)+'…':p}<br><span style="font-size:7pt;font-weight:400;">A→B</span></th>`).join('');
 
