@@ -466,6 +466,21 @@
   </div>
   <div class="acuerdos-grid" id="acuerdos-grid"></div>
 
+  <!-- SECCIÓN: CUERPO DE CORREO -->
+  <div class="section-header" style="margin-top:36px;">
+    <div class="section-title">✉️ Cuerpo de Correo — Listo para Enviar a Gerentes</div>
+    <button class="btn-copy" id="btn-copy-email" onclick="copyEmailBody(this)">📋 Copiar correo</button>
+  </div>
+  <div class="chart-card" id="email-body-section" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:24px 28px;">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text2);">Este bloque genera el texto del correo listo para copiar y pegar en Outlook o Gmail.</span>
+      <button onclick="renderEmailBody()" style="background:var(--accent3);color:#000;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Actualizar correo</button>
+    </div>
+    <div id="email-preview" style="background:#fff;color:#222;border-radius:8px;padding:20px 24px;font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.5;border:1px solid #ddd;min-height:200px;">
+      <span style="color:#aaa;font-size:12px;">Carga un Excel para generar el cuerpo del correo automáticamente...</span>
+    </div>
+  </div>
+
   <div style="height:40px;"></div>
 </div><!-- end dashboard (inner) -->
 </div><!-- end dashboard-tab -->
@@ -566,6 +581,13 @@
         <div id="comp-sucursal-table"></div>
       </div>
 
+      <!-- TABLA RENGLONES CERRADOS VS NUEVOS -->
+      <div class="section-header"><div class="section-title">Renglones Cerrados vs Nuevos — Última vs Penúltima Carga</div></div>
+      <div class="comp-table-card" id="comp-renglon-section">
+        <h3 style="margin:0 0 10px 0;">Análisis de avance por pedido+código entre cargas</h3>
+        <div id="comp-renglon-table"></div>
+      </div>
+
     </div><!-- end comp-resultado -->
 
     <div id="comp-empty" style="text-align:center;padding:60px 20px;color:var(--text3);">
@@ -636,6 +658,21 @@ function buildSnapshot(rows) {
   const kumo = rows.filter(r => col(r,'Transaccion') === 'KUMO ENTREGAS').length;
   const vtas = rows.filter(r => col(r,'Transaccion') === 'ZVA05VTAS').length;
 
+  // Guardar listado único de Pedido+Código para comparación de renglones cerrados/nuevos
+  // Usamos un Set de "numeroPedido||codigo" para identificar renglones únicos
+  const pedidoCodigoSet = new Set();
+  const pedidoCodigoList = []; // [{ped, cod}] sin duplicados
+  rows.forEach(r => {
+    const ped = col(r,'Numero de Pedido') || '';
+    const cod = col(r,'Codigo') || col(r,'Material') || col(r,'Código') || col(r,'Cod. Material') || col(r,'Codigo Material') || '';
+    const cen = col(r,'Centro') || '';
+    const key = `${ped}||${cod}||${cen}`;
+    if (!pedidoCodigoSet.has(key)) {
+      pedidoCodigoSet.add(key);
+      pedidoCodigoList.push({ ped, cod, cen });
+    }
+  });
+
   // Por centro: pedidos, renglones, costo, plazos
   const byCentro = {};
   rows.forEach(r => {
@@ -697,7 +734,7 @@ function buildSnapshot(rows) {
     if (!orgData[c]) orgData[c] = col(r,'Organizacion de Ventas') || '';
   });
 
-  return { totalPedidos, totalRenglones, totalCosto, totalCantidad, centros, kumo, vtas, centroData, orgSummary, orgData };
+  return { totalPedidos, totalRenglones, totalCosto, totalCantidad, centros, kumo, vtas, centroData, orgSummary, orgData, pedidoCodigoList };
 }
 
 // ===== TOAST =====
@@ -1610,6 +1647,7 @@ function renderAll() {
   renderTopSucursales();
   renderCoberturaOC();
   renderAcuerdos();
+  renderEmailBody();
 }
 
 // ===== GLOBAL KPIs =====
@@ -2553,6 +2591,7 @@ function runComparacion() {
   renderCompCharts(cA, cB, centrosA, centrosB);
   renderCompPlazoTable(cA, cB, centrosA, centrosB);
   renderCompSucursalTable(cA, cB, centrosA, centrosB);
+  renderCompRenglonTable(cA, cB, centroFiltro, orgFiltro);
 }
 
 function clearComparacion() {
@@ -3130,6 +3169,322 @@ function buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, o
 }
 
 
+// ===== TABLA RENGLONES CERRADOS VS NUEVOS =====
+function renderCompRenglonTable(cA, cB, centroFiltro, orgFiltro) {
+  const el = document.getElementById('comp-renglon-table');
+  if (!el) return;
+
+  // Construir listas filtradas por centro y/o org si aplica
+  let listA = (cA.pedidoCodigoList || []);
+  let listB = (cB.pedidoCodigoList || []);
+
+  if (centroFiltro) {
+    listA = listA.filter(x => x.cen === centroFiltro);
+    listB = listB.filter(x => x.cen === centroFiltro);
+  }
+  if (orgFiltro) {
+    // Filtrar usando orgData de cada carga: orgData[centro] = org
+    const orgDataA = cA.orgData || {};
+    const orgDataB = cB.orgData || {};
+    listA = listA.filter(x => orgDataA[x.cen] === orgFiltro);
+    listB = listB.filter(x => orgDataB[x.cen] === orgFiltro);
+  }
+
+  if (listA.length === 0 && listB.length === 0) {
+    el.innerHTML = `<p style="color:var(--text2);font-size:12px;padding:12px 0;">
+      ⚠️ Esta función requiere que las cargas hayan sido guardadas con la versión actualizada del dashboard.<br>
+      <em>Carga un nuevo archivo Excel para habilitar el análisis de renglones cerrados vs nuevos.</em>
+    </p>`;
+    return;
+  }
+
+  const setA = new Set(listA.map(x => `${x.ped}||${x.cod}||${x.cen}`));
+  const setB = new Set(listB.map(x => `${x.ped}||${x.cod}||${x.cen}`));
+
+  // Cerrados: estaban en A pero ya no están en B
+  const cerradosArr = listA.filter(x => !setB.has(`${x.ped}||${x.cod}||${x.cen}`));
+  // Nuevos: están en B pero no estaban en A
+  const nuevosArr = listB.filter(x => !setA.has(`${x.ped}||${x.cod}||${x.cen}`));
+  // Permanecen: están en ambos
+  const permanecenCount = listA.filter(x => setB.has(`${x.ped}||${x.cod}||${x.cen}`)).length;
+
+  const totalA = listA.length;
+  const totalB = listB.length;
+  const cerrados = cerradosArr.length;
+  const nuevos = nuevosArr.length;
+
+  const pctAvance = totalA > 0 ? ((cerrados / totalA) * 100).toFixed(1) : '0.0';
+  const pctNuevos = totalB > 0 ? ((nuevos / totalB) * 100).toFixed(1) : '0.0';
+
+  // Agrupar cerrados y nuevos por centro
+  function groupByCentro(arr) {
+    const m = {};
+    arr.forEach(x => {
+      if (!m[x.cen]) m[x.cen] = 0;
+      m[x.cen]++;
+    });
+    return m;
+  }
+
+  const cerradosByCentro = groupByCentro(cerradosArr);
+  const nuevosByCentro = groupByCentro(nuevosArr);
+  const allCentrosSet = new Set([...Object.keys(cerradosByCentro), ...Object.keys(nuevosByCentro)]);
+  const allCentros = [...allCentrosSet].sort((a,b) => {
+    const scoreA = (cerradosByCentro[a]||0) - (nuevosByCentro[a]||0);
+    const scoreB = (cerradosByCentro[b]||0) - (nuevosByCentro[b]||0);
+    return scoreB - scoreA;
+  });
+
+  const fechaA = new Date(cA.ts).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  const fechaB = new Date(cB.ts).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+
+  let html = `
+  <!-- Resumen global -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
+    <div class="comp-kpi-card">
+      <div class="comp-kpi-label">Renglones Carga A (Base)</div>
+      <div class="comp-kpi-vals"><span class="comp-kpi-a">${fmt(totalA)}</span></div>
+      <div class="comp-kpi-delta" style="font-size:10px;color:var(--text3);">${fechaA}</div>
+    </div>
+    <div class="comp-kpi-card">
+      <div class="comp-kpi-label">Renglones Carga B (Actual)</div>
+      <div class="comp-kpi-vals"><span class="comp-kpi-b">${fmt(totalB)}</span></div>
+      <div class="comp-kpi-delta" style="font-size:10px;color:var(--text3);">${fechaB}</div>
+    </div>
+    <div class="comp-kpi-card" style="border-color:var(--success);">
+      <div class="comp-kpi-label">✅ Renglones Cerrados</div>
+      <div class="comp-kpi-vals"><span style="font-size:22px;font-weight:700;color:var(--success);">${fmt(cerrados)}</span></div>
+      <div class="comp-kpi-delta" style="color:var(--success);font-weight:700;">% Avance: ${pctAvance}%</div>
+    </div>
+    <div class="comp-kpi-card" style="border-color:var(--warn);">
+      <div class="comp-kpi-label">🆕 Renglones Nuevos</div>
+      <div class="comp-kpi-vals"><span style="font-size:22px;font-weight:700;color:var(--warn);">${fmt(nuevos)}</span></div>
+      <div class="comp-kpi-delta" style="color:var(--warn);font-weight:700;">% a Validar: ${pctNuevos}%</div>
+    </div>
+    <div class="comp-kpi-card">
+      <div class="comp-kpi-label">⏳ Permanecen Abiertos</div>
+      <div class="comp-kpi-vals"><span style="font-size:22px;font-weight:700;color:var(--text2);">${fmt(permanecenCount)}</span></div>
+      <div class="comp-kpi-delta" style="color:var(--text3);">Sin cambio entre cargas</div>
+    </div>
+  </div>
+
+  <!-- Barra visual de avance -->
+  <div style="margin-bottom:18px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+      <span style="font-size:11px;color:var(--success);font-weight:700;">✅ Cerrados ${pctAvance}%</span>
+      <span style="font-size:11px;color:var(--warn);font-weight:700;">🆕 Nuevos ${pctNuevos}%</span>
+    </div>
+    <div style="display:flex;gap:3px;height:12px;border-radius:6px;overflow:hidden;background:var(--border);">
+      <div style="width:${pctAvance}%;background:var(--success);border-radius:6px 0 0 6px;transition:width 0.5s;"></div>
+      <div style="width:${Math.min(parseFloat(pctNuevos), 100 - parseFloat(pctAvance))}%;background:var(--warn);"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px;">
+      Progreso: de ${fmt(totalA)} renglones en carga A — se cerraron ${fmt(cerrados)} y entraron ${fmt(nuevos)} nuevos.
+    </div>
+  </div>
+
+  <!-- Tabla por centro -->
+  ${allCentros.length > 0 ? `
+  <h4 style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Detalle por Centro</h4>
+  <table>
+    <thead><tr>
+      <th>Centro</th>
+      <th class="num" style="color:var(--success)">✅ Cerrados</th>
+      <th class="num" style="color:var(--warn)">🆕 Nuevos</th>
+      <th class="num">% Avance</th>
+      <th class="num">% Nuevos</th>
+      <th style="min-width:140px;">Balance</th>
+    </tr></thead>
+    <tbody>
+    ${allCentros.map((c, i) => {
+      const cerC = cerradosByCentro[c] || 0;
+      const nuC = nuevosByCentro[c] || 0;
+      // Para % avance del centro necesitamos total en A de ese centro
+      const totalACentro = listA.filter(x => x.cen === c).length;
+      const totalBCentro = listB.filter(x => x.cen === c).length;
+      const pctAvCentro = totalACentro > 0 ? ((cerC / totalACentro) * 100).toFixed(1) : '—';
+      const pctNuCentro = totalBCentro > 0 ? ((nuC / totalBCentro) * 100).toFixed(1) : '—';
+      const balance = cerC - nuC;
+      const balColor = balance > 0 ? 'var(--success)' : balance < 0 ? 'var(--danger)' : 'var(--text3)';
+      return `<tr>
+        <td style="font-weight:600;color:var(--accent3);font-size:11px;">${c}</td>
+        <td class="num" style="color:var(--success);font-weight:700;">${fmt(cerC)}</td>
+        <td class="num" style="color:var(--warn);font-weight:700;">${fmt(nuC)}</td>
+        <td class="num">${pctAvCentro !== '—' ? `<span style="color:var(--success);font-weight:700;">${pctAvCentro}%</span>` : '—'}</td>
+        <td class="num">${pctNuCentro !== '—' ? `<span style="color:var(--warn);font-weight:700;">${pctNuCentro}%</span>` : '—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:700;font-size:11px;color:${balColor};">${balance >= 0 ? '+' : ''}${fmt(balance)}</span>
+            <div style="flex:1;background:var(--border);height:5px;border-radius:3px;overflow:hidden;min-width:60px;">
+              <div style="width:${Math.min(100, cerC > 0 ? (cerC/(cerC+nuC||1))*100 : 0)}%;height:100%;background:var(--success);border-radius:3px;"></div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>` : '<p style="color:var(--text3);font-size:12px;">Sin diferencias de centro detectadas.</p>'}`;
+
+  el.innerHTML = html;
+}
+
+// ===== CORREO — CUERPO PARA GERENTES =====
+function renderEmailBody() {
+  const el = document.getElementById('email-preview');
+  if (!el || !FILTERED || FILTERED.length === 0) return;
+
+  const dateStr = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // KPIs globales
+  const totalPedidos = countDistinct(FILTERED, 'Numero de Pedido');
+  const totalRenglones = FILTERED.length;
+  const totalCosto = sumField(FILTERED, 'Costo de Venta Contable Pendiente');
+
+  // Tabla por sucursal (org de ventas)
+  const byOrg = {};
+  FILTERED.forEach(r => {
+    const o = col(r,'Organizacion de Ventas') || '(Sin org)';
+    const ped = col(r,'Numero de Pedido');
+    const costo = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
+    if (!byOrg[o]) byOrg[o] = { peds: new Set(), renglones: 0, costo: 0 };
+    byOrg[o].peds.add(ped);
+    byOrg[o].renglones++;
+    byOrg[o].costo += costo;
+  });
+  const orgEntries = Object.entries(byOrg).sort((a,b) => b[1].costo - a[1].costo);
+
+  // Intentar obtener datos de comparación del último estado
+  const cs = window._lastCompState;
+  let compBlock = '';
+  let compDateA = '', compDateB = '';
+  let resumenAvanceHTML = '';
+
+  if (cs) {
+    const { cA, cB } = cs;
+    compDateA = new Date(cA.ts).toLocaleDateString('es-MX', { dateStyle: 'medium' });
+    compDateB = new Date(cB.ts).toLocaleDateString('es-MX', { dateStyle: 'medium' });
+
+    const listA = cA.pedidoCodigoList || [];
+    const listB = cB.pedidoCodigoList || [];
+    if (listA.length > 0 && listB.length > 0) {
+      const setA = new Set(listA.map(x => `${x.ped}||${x.cod}||${x.cen}`));
+      const setB = new Set(listB.map(x => `${x.ped}||${x.cod}||${x.cen}`));
+      const cerrados = listA.filter(x => !setB.has(`${x.ped}||${x.cod}||${x.cen}`)).length;
+      const nuevos = listB.filter(x => !setA.has(`${x.ped}||${x.cod}||${x.cen}`)).length;
+      const pctAv = listA.length > 0 ? ((cerrados / listA.length) * 100).toFixed(1) : '0.0';
+      const pctNu = listB.length > 0 ? ((nuevos / listB.length) * 100).toFixed(1) : '0.0';
+
+      resumenAvanceHTML = `
+      <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:10pt;margin-bottom:14px;">
+        <tr style="background:#1F3864;color:#fff;">
+          <th style="padding:7px 10px;text-align:center;">Reng. Carga A<br><span style="font-weight:400;font-size:8.5pt;">${compDateA}</span></th>
+          <th style="padding:7px 10px;text-align:center;">Reng. Carga B<br><span style="font-weight:400;font-size:8.5pt;">${compDateB}</span></th>
+          <th style="padding:7px 10px;text-align:center;color:#90EE90;">✅ Cerrados</th>
+          <th style="padding:7px 10px;text-align:center;color:#90EE90;">% Avance</th>
+          <th style="padding:7px 10px;text-align:center;color:#FFD700;">🆕 Nuevos</th>
+          <th style="padding:7px 10px;text-align:center;color:#FFD700;">% a Validar</th>
+        </tr>
+        <tr style="background:#EBF5FB;">
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;">${fmt(listA.length)}</td>
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;">${fmt(listB.length)}</td>
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#1E8449;">${fmt(cerrados)}</td>
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#1E8449;">${pctAv}%</td>
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#B8860B;">${fmt(nuevos)}</td>
+          <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#B8860B;">${pctNu}%</td>
+        </tr>
+      </table>`;
+
+      compBlock = ` y comparación de las fechas <strong>${compDateA}</strong> vs <strong>${compDateB}</strong>`;
+    }
+  }
+
+  // Tabla de pedidos únicos y renglones por organización
+  const orgTableRows = orgEntries.map(([ org, d ], i) => {
+    const pctCosto = totalCosto > 0 ? ((d.costo / totalCosto) * 100).toFixed(1) : '0.0';
+    return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+      <td style="padding:5px 10px;font-weight:bold;color:#1F3864;font-family:Calibri,Arial,sans-serif;">${org}</td>
+      <td style="padding:5px 10px;text-align:center;color:#222;font-family:Calibri,Arial,sans-serif;">${fmt(d.peds.size)}</td>
+      <td style="padding:5px 10px;text-align:center;color:#222;font-family:Calibri,Arial,sans-serif;">${fmt(d.renglones)}</td>
+      <td style="padding:5px 10px;text-align:center;font-weight:bold;color:#1F3864;font-family:Calibri,Arial,sans-serif;">${fmtM(d.costo)}</td>
+      <td style="padding:5px 10px;text-align:center;color:#222;font-family:Calibri,Arial,sans-serif;">${pctCosto}%</td>
+    </tr>`;
+  }).join('');
+
+  const emailHtml = `
+<p style="color:#222;font-family:Calibri,Arial,sans-serif;">Buen día Gerentes,</p>
+<p style="color:#222;font-family:Calibri,Arial,sans-serif;">Les comparto el corte de picking${compBlock ? compBlock : ''}, agregando la tabla neta de pedidos únicos y renglones, costo de venta y % por sucursal, ademas la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima.</p>
+<br>
+<table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:8px 10px;text-align:left;color:#fff;font-family:Calibri,Arial,sans-serif;">Indicador</th>
+    <th style="padding:8px 10px;text-align:center;color:#fff;font-family:Calibri,Arial,sans-serif;">Valor</th>
+  </tr>
+  <tr style="background:#EBF5FB;">
+    <td style="padding:6px 10px;color:#222;font-family:Calibri,Arial,sans-serif;">Pedidos únicos pendientes</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#222;font-family:Calibri,Arial,sans-serif;">${fmt(totalPedidos)}</td>
+  </tr>
+  <tr style="background:#fff;">
+    <td style="padding:6px 10px;color:#222;font-family:Calibri,Arial,sans-serif;">Renglones totales pendientes</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#222;font-family:Calibri,Arial,sans-serif;">${fmt(totalRenglones)}</td>
+  </tr>
+  <tr style="background:#EBF5FB;">
+    <td style="padding:6px 10px;color:#222;font-family:Calibri,Arial,sans-serif;">Costo de venta pendiente total</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#C55A11;font-family:Calibri,Arial,sans-serif;">${fmtM(totalCosto)}</td>
+  </tr>
+</table>
+
+<p><strong>Pedidos únicos, renglones, costo de venta y % por sucursal:</strong></p>
+<table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:8px 10px;text-align:left;color:#fff;font-family:Calibri,Arial,sans-serif;">Organización / Sucursal</th>
+    <th style="padding:8px 10px;text-align:center;color:#fff;font-family:Calibri,Arial,sans-serif;">Pedidos Únicos</th>
+    <th style="padding:8px 10px;text-align:center;color:#fff;font-family:Calibri,Arial,sans-serif;">Renglones</th>
+    <th style="padding:8px 10px;text-align:center;color:#fff;font-family:Calibri,Arial,sans-serif;">Costo de Venta</th>
+    <th style="padding:8px 10px;text-align:center;color:#fff;font-family:Calibri,Arial,sans-serif;">% del total de KNO</th>
+  </tr>
+  ${orgTableRows}
+</table>
+
+${resumenAvanceHTML ? `<p><strong>Avance de pedidos concluidos y nuevos — comparación vs última carga vs penúltima:</strong></p>\n${resumenAvanceHTML}` : ''}
+
+<p style="color:#222;font-family:Calibri,Arial,sans-serif;">Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa del problema. Se solicita atención inmediata a los renglones críticos de entrega inmediata y domicilio.</p>
+
+<p style="color:#222;font-family:Calibri,Arial,sans-serif;">Quedo al pendiente de cualquier comentario.</p>
+<br>
+<p style="color:#222;font-family:Calibri,Arial,sans-serif;">Saludos,<br><strong>Francisco Javier Cerezo Ramos</strong></p>`;
+
+  el.innerHTML = emailHtml;
+  // Store plain text version for copying
+  window._emailBodyHtml = emailHtml;
+}
+
+function copyEmailBody(btn) {
+  renderEmailBody();
+  const el = document.getElementById('email-preview');
+  if (!el) return;
+
+  // Copy as HTML to clipboard (for pasting into Outlook/Gmail)
+  const htmlContent = el.innerHTML;
+  try {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const clipboardItem = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([clipboardItem]).then(() => {
+      showToast('✅ Correo copiado como HTML — listo para pegar en Outlook/Gmail');
+      if (btn) { btn.classList.add('copied'); btn.textContent = '✓ Copiado'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 Copiar correo'; }, 2500); }
+    }).catch(() => {
+      // Fallback: copy plain text
+      const text = el.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ Correo copiado (texto plano)');
+        if (btn) { btn.classList.add('copied'); btn.textContent = '✓ Copiado'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 Copiar correo'; }, 2500); }
+      });
+    });
+  } catch(e) {
+    const text = el.innerText;
+    copyToClipboard(text, btn);
+  }
+}
+
 // ===== INIT: cargar historial al abrir =====
 window.addEventListener('DOMContentLoaded', () => {
   // Mostrar tabs-nav solo si ya hay cargas guardadas
@@ -3143,5 +3498,6 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
