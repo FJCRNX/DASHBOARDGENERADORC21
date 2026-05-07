@@ -8,12 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
-    --bg: #0f1117; --bg2: #181b24; --bg3: #1e2130; --bg4: #252a3a;
-    --accent: #f97316; --accent2: #fb923c; --accent3: #38bdf8;
-    --text: #f1f5f9; --text2: #94a3b8; --text3: #64748b;
-    --border: #2d3555; --border2: #3a4160;
-    --kumo: #38bdf8; --vtas: #a78bfa;
-    --danger: #f87171; --success: #4ade80; --warn: #fbbf24;
+    --bg: #f4f6fa; --bg2: #ffffff; --bg3: #eef1f7; --bg4: #e4e8f2;
+    --accent: #e05c00; --accent2: #f97316; --accent3: #0284c7;
+    --text: #1e2130; --text2: #4a5568; --text3: #718096;
+    --border: #d1d8e8; --border2: #b8c2d8;
+    --kumo: #0284c7; --vtas: #7c3aed;
+    --danger: #dc2626; --success: #16a34a; --warn: #d97706;
     --rad: 10px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,7 @@
   /* UPLOAD ZONE */
   #upload-section { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 40px; }
   .upload-card { background: var(--bg2); border: 2px dashed var(--border2); border-radius: 20px; padding: 60px 80px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; max-width: 600px; width: 100%; }
-  .upload-card:hover, .upload-card.drag { border-color: var(--accent); background: rgba(249,115,22,0.06); }
+  .upload-card:hover, .upload-card.drag { border-color: var(--accent); background: rgba(224,92,0,0.04); }
   .upload-icon { font-size: 52px; margin-bottom: 16px; }
   .upload-card h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
   .upload-card p { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
@@ -59,7 +59,7 @@
 
   /* KPI CARDS */
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
-  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; position: relative; overflow: hidden; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent); }
   .kpi-card.blue::before { background: var(--accent3); }
   .kpi-card.green::before { background: var(--success); }
@@ -80,7 +80,7 @@
   .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .charts-3col { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
   @media (max-width: 1100px) { .charts-2col, .charts-3col { grid-template-columns: 1fr; } }
-  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 18px 20px; }
+  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.8px; }
   .chart-card h3 span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   .chart-card h3 span.kumo { background: var(--kumo); }
@@ -91,27 +91,27 @@
   .table-compact { overflow-x: visible; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead tr { background: var(--bg3); }
-  thead th { padding: 8px 6px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: normal; word-break: break-word; line-height: 1.25; vertical-align: bottom; }
+  thead th { padding: 8px 6px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 2px solid var(--border2); white-space: normal; word-break: break-word; line-height: 1.25; vertical-align: bottom; }
   thead th.num { text-align: center; }
   thead th.th-compact { text-align: center; max-width: 72px; min-width: 48px; font-size: 9px; }
   thead th.th-fixed { white-space: nowrap; }
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-  tbody tr:hover { background: var(--bg3); }
+  tbody tr:hover { background: #eef4fb; }
   tbody td { padding: 8px 6px; color: var(--text); }
   tbody td.num { text-align: center; font-variant-numeric: tabular-nums; }
   thead th.th-num { text-align: center; }
   tbody td.muted { color: var(--text2); }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
-  .pill.alto { background: rgba(248,113,113,0.15); color: var(--danger); }
-  .pill.medio { background: rgba(251,191,36,0.15); color: var(--warn); }
-  .pill.bajo { background: rgba(74,222,128,0.15); color: var(--success); }
+  .pill.alto { background: rgba(220,38,38,0.1); color: var(--danger); }
+  .pill.medio { background: rgba(217,119,6,0.1); color: var(--warn); }
+  .pill.bajo { background: rgba(22,163,74,0.1); color: var(--success); }
 
   /* ACUERDOS */
   .acuerdos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
   .acuerdo-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }
   .acuerdo-header { background: var(--bg3); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
   .acuerdo-header .centro-name { font-size: 15px; font-weight: 700; color: var(--accent3); }
-  .acuerdo-header .centro-badge { font-size: 11px; background: rgba(249,115,22,0.15); color: var(--accent); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .acuerdo-header .centro-badge { font-size: 11px; background: rgba(224,92,0,0.12); color: var(--accent); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
   .acuerdo-body { padding: 14px 16px; }
   .acuerdo-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
   .mini-kpi { background: var(--bg3); border-radius: 6px; padding: 8px 10px; }
@@ -129,19 +129,19 @@
 
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-track { background: var(--bg3); }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
   /* LOADING */
-  #loading { display: none; position: fixed; inset: 0; background: rgba(15,17,23,0.9); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  #loading { display: none; position: fixed; inset: 0; background: rgba(244,246,250,0.92); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
   .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-  .filter-row select { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 7px 12px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+  .filter-row select { background: #fff; color: var(--text); border: 1px solid var(--border); padding: 7px 12px; border-radius: 7px; font-size: 13px; cursor: pointer; }
   .filter-row label { font-size: 12px; color: var(--text2); }
   .reset-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 7px 14px; border-radius: 7px; font-size: 12px; cursor: pointer; }
-  .reset-btn:hover { background: rgba(249,115,22,0.1); }
+  .reset-btn:hover { background: rgba(224,92,0,0.07); }
 
   .top-bar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 10px 28px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .top-bar span { font-size: 12px; color: var(--text2); }
@@ -149,18 +149,18 @@
   .file-name { font-size: 13px; color: var(--text); background: var(--bg3); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); }
 
   /* TOAST */
-  #toast { position: fixed; bottom: 28px; right: 28px; background: var(--success); color: #000; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+  #toast { position: fixed; bottom: 28px; right: 28px; background: var(--success); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none; }
   #toast.show { transform: translateY(0); opacity: 1; }
 
   /* MODAL SELECCIÓN SECCIONES */
-  #modal-secciones { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; align-items: center; justify-content: center; }
+  #modal-secciones { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 500; align-items: center; justify-content: center; }
   #modal-secciones.open { display: flex; }
-  .modal-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .modal-box { background: #fff; border: 1px solid var(--border2); border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); }
   .modal-box h2 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
   .modal-box p { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
   .modal-sections { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
   .modal-sec-item { display: flex; align-items: center; gap: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-  .modal-sec-item:hover { border-color: var(--accent3); background: var(--bg4); }
+  .modal-sec-item:hover { border-color: var(--accent3); background: #e8f4fd; }
   .modal-sec-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
   .modal-sec-item label { font-size: 13px; color: var(--text); cursor: pointer; flex: 1; }
   .modal-sec-item .sec-badge { font-size: 10px; color: var(--text3); }
@@ -174,15 +174,15 @@
   /* TABS */
   .tabs-nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 0; }
   .tab-btn { background: transparent; border: none; border-bottom: 3px solid transparent; padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
-  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .tab-btn:hover { color: var(--text); background: rgba(0,0,0,0.04); }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
   /* HISTORIAL CARGAS */
   .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
-  .hist-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; transition: border-color 0.2s; }
-  .hist-card:hover { border-color: var(--border2); }
+  .hist-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; transition: border-color 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .hist-card:hover { border-color: var(--accent3); }
   .hist-card-header { background: var(--bg3); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
   .hist-card-title { font-size: 13px; font-weight: 700; color: var(--accent3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
   .hist-card-date { font-size: 11px; color: var(--text3); }
@@ -195,18 +195,18 @@
   .btn-hist-load { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .btn-hist-load:hover { background: var(--accent2); }
   .btn-hist-del { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
-  .btn-hist-del:hover { background: rgba(248,113,113,0.12); }
+  .btn-hist-del:hover { background: rgba(220,38,38,0.08); }
   .btn-hist-compare { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
-  .btn-hist-compare:hover { background: rgba(56,189,248,0.1); }
+  .btn-hist-compare:hover { background: rgba(2,132,199,0.08); }
   .hist-empty { text-align: center; padding: 60px 20px; color: var(--text3); }
   .hist-empty .ei { font-size: 48px; margin-bottom: 12px; }
 
   /* COMPARACION */
-  .comp-controls { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 20px; margin-bottom: 20px; }
+  .comp-controls { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .comp-controls h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 14px; }
   .comp-selects { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; flex-wrap: wrap; }
   @media (max-width: 1200px) { .comp-selects { grid-template-columns: 1fr 1fr 1fr; } }
-  .comp-selects select { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 7px; font-size: 12px; cursor: pointer; width: 100%; }
+  .comp-selects select { background: #fff; color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 7px; font-size: 12px; cursor: pointer; width: 100%; }
   .comp-selects label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 5px; }
   .btn-comp-run { background: var(--accent); color: #fff; border: none; padding: 9px 22px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; height: 38px; }
   .btn-comp-run:hover { background: var(--accent2); }
@@ -215,7 +215,7 @@
   .comp-delta-neg { color: var(--danger); font-weight: 700; }
   .comp-delta-neu { color: var(--text3); }
   .comp-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-  .comp-kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; }
+  .comp-kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .comp-kpi-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
   .comp-kpi-vals { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .comp-kpi-a { font-size: 20px; font-weight: 700; color: var(--kumo); }
@@ -224,13 +224,13 @@
   .comp-kpi-delta { font-size: 12px; margin-top: 4px; }
   .comp-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
   @media (max-width: 900px) { .comp-chart-row { grid-template-columns: 1fr; } .comp-selects { grid-template-columns: 1fr 1fr; } }
-  .comp-table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; margin-bottom: 20px; }
+  .comp-table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .comp-table-card h3 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
   .sucursal-report-btn { background: var(--accent); color: #fff; border: none; padding: 8px 18px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: auto; display: block; }
   .sucursal-report-btn:hover { background: var(--accent2); }
 
   /* MODAL CONFIRM ELIMINAR */
-  #modal-confirm { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 600; align-items: center; justify-content: center; }
+  #modal-confirm { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 600; align-items: center; justify-content: center; }
   #modal-confirm.open { display: flex; }
 </style>
 </head>
@@ -465,6 +465,19 @@
     <button class="btn-copy" onclick="copySection('acuerdos-grid', 'acuerdos', this)">📋 Copiar</button>
   </div>
   <div class="acuerdos-grid" id="acuerdos-grid"></div>
+
+  <!-- TABLA A NIVEL RENGLÓN -->
+  <div class="section-header" style="margin-top:28px;">
+    <div class="section-title">📋 Detalle a Nivel Renglón — Análisis Completo</div>
+    <button class="btn-copy" onclick="copyTableSection('renglon-detail-table', this)">📋 Copiar tabla</button>
+  </div>
+  <div class="chart-card" id="renglon-detail-section">
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text2);">Filtros activos afectan esta tabla. Muestra motivo pendiente, días desde OC, acciones sugeridas y comentario por renglón.</span>
+      <span style="font-size:11px;color:var(--text3);" id="renglon-count-badge"></span>
+    </div>
+    <div class="table-wrap" id="renglon-detail-table" style="max-height:480px;overflow-y:auto;"></div>
+  </div>
 
   <!-- SECCIÓN: CUERPO DE CORREO -->
   <div class="section-header" style="margin-top:36px;">
@@ -996,14 +1009,14 @@ function captureChartsForExport() {
     if (chartObj) {
       try {
         Object.values(chartObj.options.scales || {}).forEach(scale => {
-          if (scale.ticks && scale.ticks.color === '#f1f5f9') {
+          if (scale.ticks && scale.ticks.color === '#1e2130') {
             ticksToRestore.push(scale.ticks);
             scale.ticks.color = '#1a1a1a';
           }
         });
         // Also darken legend labels if present
         if (chartObj.options.plugins?.legend?.labels?.color === '#94a3b8') {
-          chartObj.options.plugins.legend.labels._orig = '#94a3b8';
+          chartObj.options.plugins.legend.labels._orig = '#64748b';
           chartObj.options.plugins.legend.labels.color = '#333333';
         }
         chartObj.update('none'); // redraw without animation
@@ -1025,7 +1038,7 @@ function captureChartsForExport() {
     // Restore original colors
     if (chartObj) {
       try {
-        ticksToRestore.forEach(ticks => { ticks.color = '#f1f5f9'; });
+        ticksToRestore.forEach(ticks => { ticks.color = '#1e2130'; });
         if (chartObj.options.plugins?.legend?.labels?._orig) {
           chartObj.options.plugins.legend.labels.color = chartObj.options.plugins.legend.labels._orig;
           delete chartObj.options.plugins.legend.labels._orig;
@@ -1634,6 +1647,138 @@ function fmtM(n) { return '$' + (n >= 1e6 ? (n/1e6).toFixed(2) + 'M' : fmt(n)); 
 function fmtK(n) { return n >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(1) + 'K' : '$' + Math.round(n); }
 
 // ===== RENDER ALL =====
+// ===== TABLA A NIVEL RENGLÓN (se regenera tras cada carga y con filtros) =====
+function renderRenglonDetail() {
+  const el = document.getElementById('renglon-detail-table');
+  const badge = document.getElementById('renglon-count-badge');
+  if (!el) return;
+  if (FILTERED.length === 0) {
+    el.innerHTML = '<p style="color:var(--text2);padding:12px;">Carga un archivo Excel para ver el detalle a nivel renglón.</p>';
+    if (badge) badge.textContent = '';
+    return;
+  }
+
+  // Columnas de la imagen: Motivo Pend., Acción 1, Acción 2, Validación, Comentario a agregar
+  // Derivar lógica basada en los campos disponibles
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  function motivoPend(r) {
+    const en = (col(r,'En existencia') || col(r,'Existencia') || '').toString().trim().toLowerCase();
+    const oc = parseFloat(col(r,'Orden de compra') || col(r,'OC') || col(r,'Num OC') || 0) || 0;
+    const trasp = parseFloat(col(r,'Traspaso') || col(r,'Cant Traspaso') || 0) || 0;
+    const mat = col(r,'Material en curso') || col(r,'Material Curso') || '';
+    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
+    const grp = col(r,'Grupo de articulos') || col(r,'Grupo articulos 1-0') || '';
+    const fact = col(r,'Pend Anular Factura') || col(r,'Factura') || '';
+    const no_cnt = (col(r,'Artículos con picking pend. de ap') || '').toString().toLowerCase();
+
+    if (en === 'si' || en === 'sí' || en === 'yes' || en === '1') return 'En Existencia y en Sistema';
+    if (oc > 0 || trasp > 0) return 'Orden de compra en Sistema';
+    if (mat && mat.toString().trim() !== '' && mat.toString().trim() !== '0') return 'Entrega a Obra';
+    if (no_cnt.includes('0') || no_cnt === '') return 'Artículos con picking pend.';
+    if (grp.toString().includes('1-0') || grp.toString().includes('1-2')) return 'Grupo de artículos';
+    if (fact.toString().trim() !== '' && fact.toString().trim() !== '0') return 'Pend. Anular Factura';
+    return 'Sin dato / Otro';
+  }
+
+  function accion1(r) {
+    const mot = motivoPend(r);
+    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
+    const isPriority = PRIORITY_PLAZOS.some(p => plazo.includes(p.split(' ')[0]));
+    if (mot === 'En Existencia y en Sistema') return 'Validar en sistema y procesar picking';
+    if (mot === 'Orden de compra en Sistema') return 'Validar columna días desde OC; gestionar recepción';
+    if (mot === 'Entrega a Obra') return 'Validar si llegó material; actualizar status';
+    if (mot === 'Pend. Anular Factura') return 'Seguimiento con cancelaciones';
+    if (mot === 'Artículos con picking pend.') return '¿Existe o no se contabiliza? Gestionar resguardo';
+    if (mot === 'Grupo de artículos') return 'Actualizar motivo correcto';
+    return isPriority ? '⚡ Atención inmediata requerida' : 'Revisar con almacén';
+  }
+
+  function accion2(r) {
+    const mot = motivoPend(r);
+    if (mot === 'En Existencia y en Sistema') return 'Si sin OC: Picking Justificado; si no: Picking sin seguimiento';
+    if (mot === 'Orden de compra en Sistema') return 'Agregar comentario con fecha estimada de abasto';
+    if (mot === 'Entrega a Obra') return 'Si > 10 días: verificar si en cero; generar OC si no hay entrada';
+    if (mot === 'Artículos con picking pend.') return 'Revisar si hay traspaso o gestionan proceso de resguardo';
+    return '—';
+  }
+
+  function validacion(r) {
+    const mot = motivoPend(r);
+    if (mot === 'Grupo de artículos' || mot === 'Artículos con picking pend.') return 'Actualizar motivo correcto';
+    if (mot === 'Pend. Anular Factura') return 'Confirmar cancelación con área de facturación';
+    if (mot === 'En Existencia y en Sistema') return 'Calcular días pendiente; mostrar en tabla';
+    return 'Validar cantidad propia y mencionar cobertura';
+  }
+
+  function comentario(r) {
+    const ped = col(r,'Numero de Pedido') || '';
+    const cod = col(r,'Codigo') || col(r,'Material') || '';
+    const cant = col(r,'Cantidad Pendiente') || '';
+    const cen = col(r,'Centro') || '';
+    const mot = motivoPend(r);
+    const plazo = col(r,'Plazo de Entrega') || '';
+    return `Pend. ${cant} uds · ${mot} · ${plazo} · Sin existencia considerando esto para demás condiciones`;
+  }
+
+  const rows = FILTERED;
+  if (badge) badge.textContent = `${fmt(rows.length)} renglones | ${new Set(rows.map(r=>col(r,'Numero de Pedido'))).size} pedidos únicos`;
+
+  let html = `<table style="min-width:1200px;table-layout:auto;">
+    <thead><tr style="background:#f0f4fb;">
+      <th style="min-width:80px;white-space:nowrap;">Pedido</th>
+      <th style="min-width:70px;">Código</th>
+      <th style="min-width:80px;">Centro</th>
+      <th style="min-width:90px;">Org. Ventas</th>
+      <th style="min-width:80px;">Transacción</th>
+      <th style="min-width:80px;">Plazo</th>
+      <th class="num" style="min-width:60px;">Cant. Pend.</th>
+      <th class="num" style="min-width:80px;">Costo Pend.</th>
+      <th style="min-width:130px;background:#e8f4fd;">Motivo Pendiente</th>
+      <th style="min-width:180px;background:#fff3e0;">Acción 1</th>
+      <th style="min-width:160px;background:#fff8e1;">Acción 2</th>
+      <th style="min-width:140px;background:#f3e5f5;">Validación</th>
+      <th style="min-width:220px;background:#e8f5e9;">Comentario a Agregar</th>
+    </tr></thead><tbody>`;
+
+  rows.slice(0, 2000).forEach((r, i) => {
+    const plazo = col(r,'Plazo de Entrega') || '';
+    const isPriority = PRIORITY_PLAZOS.some(p => plazo.toUpperCase().includes(p.split(' ')[0]));
+    const rowBg = i%2===0 ? '#fff' : '#f8fafd';
+    const priorityStyle = isPriority ? 'border-left:3px solid var(--danger);' : '';
+    const mot = motivoPend(r);
+    const tx = col(r,'Transaccion') || '';
+    const txBadge = tx === 'KUMO ENTREGAS'
+      ? `<span style="background:#dbeafe;color:var(--kumo);padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700;">KUMO</span>`
+      : `<span style="background:#ede9fe;color:var(--vtas);padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700;">VTAS</span>`;
+
+    html += `<tr style="background:${rowBg};${priorityStyle}">
+      <td style="font-size:11px;font-weight:600;">${col(r,'Numero de Pedido')||'—'}</td>
+      <td style="font-size:11px;">${col(r,'Codigo')||col(r,'Material')||'—'}</td>
+      <td style="font-size:11px;font-weight:600;color:var(--accent3);">${col(r,'Centro')||'—'}</td>
+      <td style="font-size:10px;color:var(--text2);">${col(r,'Organizacion de Ventas')||'—'}</td>
+      <td>${txBadge}</td>
+      <td style="font-size:10px;color:${isPriority?'var(--danger)':'var(--text2)'};font-weight:${isPriority?'700':'400'};">${isPriority?'⚡ ':''} ${plazo||'—'}</td>
+      <td class="num" style="font-weight:600;">${fmt(parseFloat(col(r,'Cantidad Pendiente'))||0)}</td>
+      <td class="num" style="color:var(--accent);font-weight:600;">${fmtM(parseFloat(col(r,'Costo de Venta Contable Pendiente'))||0)}</td>
+      <td style="font-size:10px;background:#e8f4fd;color:#1e4976;font-weight:600;">${mot}</td>
+      <td style="font-size:10px;background:#fff3e0;color:#7c3e00;">${accion1(r)}</td>
+      <td style="font-size:10px;background:#fff8e1;color:#6b4c00;">${accion2(r)}</td>
+      <td style="font-size:10px;background:#f3e5f5;color:#4a148c;">${validacion(r)}</td>
+      <td style="font-size:9px;background:#e8f5e9;color:#1b5e20;">${comentario(r)}</td>
+    </tr>`;
+  });
+
+  if (rows.length > 2000) {
+    html += `<tr><td colspan="13" style="text-align:center;padding:10px;font-size:11px;color:var(--text2);background:#f8fafd;">
+      ⚠️ Mostrando primeros 2,000 de ${fmt(rows.length)} renglones. Aplica filtros para reducir el conjunto.
+    </td></tr>`;
+  }
+
+  html += `</tbody></table>`;
+  el.innerHTML = html;
+}
+
 function renderAll() {
   renderGlobalKPIs();
   renderOrgCards();
@@ -1647,6 +1792,7 @@ function renderAll() {
   renderTopSucursales();
   renderCoberturaOC();
   renderAcuerdos();
+  renderRenglonDetail();
   renderEmailBody();
 }
 
@@ -1729,7 +1875,7 @@ function renderChartPedidosCentro() {
     },
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.raw) + ' pedidos' } } },
-      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } } }
+      scales: { x: { ticks: { color: '#64748b', callback: v => fmt(v) }, grid: { color: '#e2e8f0' } }, y: { ticks: { color: '#1e2130', font: { size: 11 } }, grid: { display: false } } }
     }
   });
 }
@@ -1746,7 +1892,7 @@ function renderChartCostoCentro() {
     },
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmtM(c.raw) } } },
-      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } } }
+      scales: { x: { ticks: { color: '#64748b', callback: v => fmtK(v) }, grid: { color: '#e2e8f0' } }, y: { ticks: { color: '#1e2130', font: { size: 11 } }, grid: { display: false } } }
     }
   });
 }
@@ -1782,12 +1928,12 @@ function renderChartPlazo() {
       type: 'bar', data: { labels: top15, datasets },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 8 } },
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 }, boxWidth: 10, padding: 8 } },
           tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) + ' ped.' } }
         },
         scales: {
-          x: { stacked: true, ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } },
-          y: { stacked: true, ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }
+          x: { stacked: true, ticks: { color: '#64748b', callback: v => fmt(v) }, grid: { color: '#e2e8f0' } },
+          y: { stacked: true, ticks: { color: '#1e2130', font: { size: 11 } }, grid: { display: false } }
         }
       }
     });
@@ -1815,8 +1961,8 @@ function renderChartCostoTx() {
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmtM(c.raw) } } },
       scales: {
-        x: { stacked: true, ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } },
-        y: { stacked: true, ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }
+        x: { stacked: true, ticks: { color: '#64748b', callback: v => fmtK(v) }, grid: { color: '#e2e8f0' } },
+        y: { stacked: true, ticks: { color: '#1e2130', font: { size: 11 } }, grid: { display: false } }
       }
     }
   });
@@ -1833,7 +1979,7 @@ function renderChartDonut() {
       datasets: [{ data: [kumo, vtas], backgroundColor: ['#38bdf8','#a78bfa'], borderWidth: 0, hoverOffset: 8 }]
     },
     options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+      plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 11 }, boxWidth: 12 } },
         tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + fmt(c.raw) + ' (' + (c.raw/(kumo+vtas)*100).toFixed(1) + '%)' } }
       }
     }
@@ -1852,7 +1998,7 @@ function renderChartOrgBar() {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.raw) + ' pedidos' } } },
-      scales: { x: { ticks: { color: '#f1f5f9', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } } }
+      scales: { x: { ticks: { color: '#1e2130', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#64748b', callback: v => fmt(v) }, grid: { color: '#e2e8f0' } } }
     }
   });
 }
@@ -2233,7 +2379,7 @@ function renderAcuerdos() {
     }
 
     if (d.costo > 5000000) {
-      acuerdos.push(`Prioridad ALTA de liberación: $${fmtM(d.costo)} (${pctCosto}% del total nacional). Involucrar a gerencia regional para destrabar pedidos de mayor valor.`);
+      acuerdos.push(`Prioridad ALTA de liberación: $${fmtM(d.costo)} (${pctCosto}% del total pedidos). Involucrar a gerencia regional para destrabar pedidos de mayor valor.`);
     } else if (d.costo > 1000000) {
       acuerdos.push(`Monitoreo de costo pendiente de $${fmtM(d.costo)}: concentrar esfuerzo en los 10 pedidos de mayor valor unitario.`);
     }
@@ -2689,8 +2835,8 @@ function renderCompCharts(cA, cB, centrosA, centrosB) {
       ]
     },
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) + ' ped.' } } },
-      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmt(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 10 } }, grid: { display: false } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#64748b', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) + ' ped.' } } },
+      scales: { x: { ticks: { color: '#64748b', callback: v => fmt(v) }, grid: { color: '#e2e8f0' } }, y: { ticks: { color: '#1e2130', font: { size: 10 } }, grid: { display: false } } }
     }
   });
 
@@ -2704,8 +2850,8 @@ function renderCompCharts(cA, cB, centrosA, centrosB) {
       ]
     },
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmtM(c.raw) } } },
-      scales: { x: { ticks: { color: '#94a3b8', callback: v => fmtK(v) }, grid: { color: '#2d3555' } }, y: { ticks: { color: '#f1f5f9', font: { size: 10 } }, grid: { display: false } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#64748b', boxWidth: 12 } }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmtM(c.raw) } } },
+      scales: { x: { ticks: { color: '#64748b', callback: v => fmtK(v) }, grid: { color: '#e2e8f0' } }, y: { ticks: { color: '#1e2130', font: { size: 10 } }, grid: { display: false } } }
     }
   });
 }
@@ -3178,6 +3324,85 @@ function buildInformeComparacionWord(cA, cB, centrosA, centrosB, centroFiltro, o
   <tbody>${sucursalRows}</tbody>
 </table>
 
+<!-- 5. RENGLONES CERRADOS VS NUEVOS -->
+<h2>&#9632; 5. Renglones Cerrados vs Nuevos — Avance entre Cargas</h2>
+${(() => {
+  const stateComp = window._lastCompState;
+  if (!stateComp) return '<p style="color:#999;font-size:9pt;">Sin datos de comparación disponibles.</p>';
+  const { cA: csA, cB: csB } = stateComp;
+  let lA = (csA.pedidoCodigoList || []);
+  let lB = (csB.pedidoCodigoList || []);
+  if (lA.length === 0 && lB.length === 0) return '<p style="color:#999;font-size:9pt;">Las cargas no contienen datos de renglones (requiere versión actualizada).</p>';
+  const kF = x => x.ped + '||' + x.cod + '||' + x.cen;
+  const sA = new Set(lA.map(kF)), sB = new Set(lB.map(kF));
+  const cerr = lA.filter(x => !sB.has(kF(x))).length;
+  const nuev = lB.filter(x => !sA.has(kF(x))).length;
+  const perm = lA.filter(x => sB.has(kF(x))).length;
+  const pctAv = lA.length > 0 ? ((cerr/lA.length)*100).toFixed(1) : '0.0';
+  const pctNu = lB.length > 0 ? ((nuev/lB.length)*100).toFixed(1) : '0.0';
+  const fA = new Date(csA.ts).toLocaleDateString('es-MX', {dateStyle:'medium'});
+  const fB = new Date(csB.ts).toLocaleDateString('es-MX', {dateStyle:'medium'});
+
+  // Group by centro
+  function grp(arr) { const m={}; arr.forEach(x=>{m[x.cen]=(m[x.cen]||0)+1;}); return m; }
+  const cerrByCen = grp(lA.filter(x=>!sB.has(kF(x))));
+  const nuevByCen = grp(lB.filter(x=>!sA.has(kF(x))));
+  const allCens = [...new Set([...Object.keys(cerrByCen),...Object.keys(nuevByCen)])].sort();
+  const cenRows = allCens.map((cen, i) => {
+    const totAc = lA.filter(x=>x.cen===cen).length;
+    const totBc = lB.filter(x=>x.cen===cen).length;
+    const cerC = cerrByCen[cen]||0;
+    const nuC = nuevByCen[cen]||0;
+    const pAv = totAc > 0 ? ((cerC/totAc)*100).toFixed(1) : '—';
+    const pNu = totBc > 0 ? ((nuC/totBc)*100).toFixed(1) : '—';
+    const bal = cerC - nuC;
+    const bg = i%2===0?'#EBF5FB':'#fff';
+    const balColor = bal>0?'#1E8449':bal<0?'#C0392B':'#888';
+    return `<tr style="background:${bg};">
+      <td style="padding:4px 8px;font-size:8.5pt;font-weight:bold;color:#1F3864;">${cen}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:8.5pt;color:#1E8449;font-weight:bold;">${fmt(cerC)}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:8.5pt;color:#B8860B;font-weight:bold;">${fmt(nuC)}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:8.5pt;color:#1E8449;">${pAv !== '—' ? pAv+'%' : '—'}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:8.5pt;color:#B8860B;">${pNu !== '—' ? pNu+'%' : '—'}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:8.5pt;font-weight:bold;color:${balColor};">${bal>=0?'+':''}${fmt(bal)}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+<table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:10pt;margin-bottom:14px;border:1px solid #BDC3C7;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:7px 10px;text-align:center;">Reng. Carga A (${fA})</th>
+    <th style="padding:7px 10px;text-align:center;">Reng. Carga B (${fB})</th>
+    <th style="padding:7px 10px;text-align:center;color:#90EE90;">✅ Cerrados</th>
+    <th style="padding:7px 10px;text-align:center;color:#90EE90;">% Avance</th>
+    <th style="padding:7px 10px;text-align:center;color:#FFD700;">🆕 Nuevos</th>
+    <th style="padding:7px 10px;text-align:center;color:#FFD700;">% a Validar</th>
+    <th style="padding:7px 10px;text-align:center;">⏳ Permanecen</th>
+  </tr>
+  <tr style="background:#EBF5FB;">
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;">${fmt(lA.length)}</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;">${fmt(lB.length)}</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#1E8449;">${fmt(cerr)}</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#1E8449;">${pctAv}%</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#B8860B;">${fmt(nuev)}</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#B8860B;">${pctNu}%</td>
+    <td style="padding:6px 10px;text-align:center;font-weight:bold;color:#555;">${fmt(perm)}</td>
+  </tr>
+</table>
+<h3 style="font-size:10pt;color:#555;margin:10px 0 5px;">Detalle por Centro — Renglones Cerrados vs Nuevos</h3>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:9pt;border:1px solid #BDC3C7;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:5px 8px;text-align:left;">Centro</th>
+    <th style="padding:5px 8px;text-align:center;color:#90EE90;">✅ Cerrados</th>
+    <th style="padding:5px 8px;text-align:center;color:#FFD700;">🆕 Nuevos</th>
+    <th style="padding:5px 8px;text-align:center;">% Avance</th>
+    <th style="padding:5px 8px;text-align:center;">% Nuevos</th>
+    <th style="padding:5px 8px;text-align:center;">Balance</th>
+  </tr>
+  ${cenRows}
+</table>`;
+})()}
+
 </div>
 
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#1F3864;margin-top:30px;">
@@ -3451,6 +3676,44 @@ function renderEmailBody() {
     }
   }
 
+  // Centros afectados por filtros activos
+  const centroFiltroActivo = document.getElementById('filter-centro')?.value || '';
+  const orgFiltroActivo = document.getElementById('filter-org')?.value || '';
+  const centrosAfectados = [...new Set(FILTERED.map(r => col(r,'Centro')).filter(Boolean))].sort();
+  const filtrosActivos = [];
+  if (orgFiltroActivo) filtrosActivos.push(`Org. Ventas: <strong>${orgFiltroActivo}</strong>`);
+  if (centroFiltroActivo) filtrosActivos.push(`Centro: <strong>${centroFiltroActivo}</strong>`);
+
+  let centrosAfectadosBlock = '';
+  if (centrosAfectados.length > 0 && centrosAfectados.length <= 50) {
+    const centrosByOrg = {};
+    FILTERED.forEach(r => {
+      const o = col(r,'Organizacion de Ventas') || '(Sin org)';
+      const c = col(r,'Centro') || '';
+      if (c) {
+        if (!centrosByOrg[o]) centrosByOrg[o] = new Set();
+        centrosByOrg[o].add(c);
+      }
+    });
+    const centroRows = Object.entries(centrosByOrg).sort((a,b)=>a[0].localeCompare(b[0])).map(([org, cs], i) => {
+      return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
+        <td style="padding:4px 10px;font-weight:bold;color:#1F3864;">${org}</td>
+        <td style="padding:4px 10px;font-size:9pt;color:#333;">${[...cs].sort().join(', ')}</td>
+      </tr>`;
+    }).join('');
+    centrosAfectadosBlock = `
+<p><strong>Centros incluidos en este corte${filtrosActivos.length > 0 ? ' ('+filtrosActivos.join(', ')+')' : ''}:</strong></p>
+<table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:9pt;border:1px solid #BDC3C7;margin-bottom:16px;">
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="padding:6px 10px;text-align:left;">Organización</th>
+    <th style="padding:6px 10px;text-align:left;">Centros Afectados</th>
+  </tr>
+  ${centroRows}
+</table>`;
+  } else if (centrosAfectados.length > 50) {
+    centrosAfectadosBlock = `<p><em>Centros incluidos: <strong>${fmt(centrosAfectados.length)}</strong> centros activos en el corte${filtrosActivos.length > 0 ? ' ('+filtrosActivos.join(', ')+')' : ''}.</em></p>`;
+  }
+
   // Tabla de pedidos únicos y renglones por organización
   const orgTableRows = orgEntries.map(([ org, d ], i) => {
     const pctCosto = totalCosto > 0 ? ((d.costo / totalCosto) * 100).toFixed(1) : '0.0';
@@ -3465,7 +3728,7 @@ function renderEmailBody() {
 
   const emailHtml = `
 <p>Buen día Gerentes,</p>
-<p>Les comparto el corte de picking${compBlock ? compBlock : ''}, agregando la tabla neta de pedidos únicos y renglones, costo de venta y % por sucursal, ademas la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima.</p>
+<p>Les comparto el corte de picking${compBlock ? compBlock : ''}, agregando la tabla neta de pedidos únicos y renglones, costo de venta y % del total de KNO por sucursal, así como la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima.</p>
 <br>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
@@ -3486,7 +3749,9 @@ function renderEmailBody() {
   </tr>
 </table>
 
-<p><strong>Pedidos únicos, renglones, costo de venta y % por sucursal:</strong></p>
+${centrosAfectadosBlock}
+
+<p><strong>Pedidos únicos, renglones, costo de venta y % del total de KNO por sucursal:</strong></p>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
     <th style="padding:8px 10px;text-align:left;">Organización / Sucursal</th>
@@ -3500,7 +3765,7 @@ function renderEmailBody() {
 
 ${resumenAvanceHTML ? `<p><strong>Avance de pedidos concluidos y nuevos — comparación vs última carga vs penúltima:</strong></p>\n${resumenAvanceHTML}` : ''}
 
-<p>Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa del problema. Se solicita atención inmediata a los renglones críticos de entrega inmediata y domicilio.</p>
+<p>Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa raíz del problema. Se solicita atención inmediata a los renglones críticos de entrega inmediata y domicilio.</p>
 
 <p>Quedo al pendiente de cualquier comentario.</p>
 <br>
