@@ -476,6 +476,22 @@
       <span style="font-size:12px;color:var(--text2);">Filtros activos afectan esta tabla. Muestra motivo pendiente, días desde OC, acciones sugeridas y comentario por renglón.</span>
       <span style="font-size:11px;color:var(--text3);" id="renglon-count-badge"></span>
     </div>
+
+    <!-- Botones de descarga (respetan filtros activos) -->
+    <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:#f8fafd;border:1px dashed var(--border2);border-radius:8px;">
+      <span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;">⬇ Descargar tabla filtrada:</span>
+      <button class="btn-download-renglon" onclick="downloadRenglonExcel()" style="background:#16a34a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+        <span>📊</span> Excel (.xlsx)
+      </button>
+      <button class="btn-download-renglon" onclick="downloadRenglonHTML()" style="background:#0284c7;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+        <span>🌐</span> HTML con formato
+      </button>
+      <button class="btn-download-renglon" onclick="downloadRenglonCSV()" style="background:#e05c00;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+        <span>📄</span> CSV
+      </button>
+      <span id="renglon-download-info" style="font-size:11px;color:var(--text3);margin-left:auto;"></span>
+    </div>
+
     <div class="table-wrap" id="renglon-detail-table" style="max-height:480px;overflow-y:auto;"></div>
   </div>
 
@@ -1777,6 +1793,256 @@ function renderRenglonDetail() {
 
   html += `</tbody></table>`;
   el.innerHTML = html;
+
+  // Actualizar info de descarga con filtros activos
+  const dlInfo = document.getElementById('renglon-download-info');
+  if (dlInfo) {
+    const org = document.getElementById('filter-org')?.value || '';
+    const centro = document.getElementById('filter-centro')?.value || '';
+    const filtros = [];
+    if (org) filtros.push(`Org: ${org}`);
+    if (centro) filtros.push(`Centro: ${centro}`);
+    dlInfo.textContent = filtros.length > 0
+      ? `Filtros: ${filtros.join(' · ')} — ${fmt(rows.length)} renglones`
+      : `Sin filtros activos — ${fmt(rows.length)} renglones`;
+  }
+}
+
+// ============================================
+// DESCARGAS DE LA TABLA "DETALLE A NIVEL RENGLÓN"
+// (respetan filtros activos: Org. Ventas + Centro)
+// ============================================
+
+function _buildRenglonDownloadRows() {
+  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  function motivoPend(r) {
+    const en = (col(r,'En existencia') || col(r,'Existencia') || '').toString().trim().toLowerCase();
+    const oc = parseFloat(col(r,'Orden de compra') || col(r,'OC') || col(r,'Num OC') || 0) || 0;
+    const trasp = parseFloat(col(r,'Traspaso') || col(r,'Cant Traspaso') || 0) || 0;
+    const mat = col(r,'Material en curso') || col(r,'Material Curso') || '';
+    const grp = col(r,'Grupo de articulos') || col(r,'Grupo articulos 1-0') || '';
+    const fact = col(r,'Pend Anular Factura') || col(r,'Factura') || '';
+    const no_cnt = (col(r,'Artículos con picking pend. de ap') || '').toString().toLowerCase();
+    if (en === 'si' || en === 'sí' || en === 'yes' || en === '1') return 'En Existencia y en Sistema';
+    if (oc > 0 || trasp > 0) return 'Orden de compra en Sistema';
+    if (mat && mat.toString().trim() !== '' && mat.toString().trim() !== '0') return 'Entrega a Obra';
+    if (no_cnt.includes('0') || no_cnt === '') return 'Artículos con picking pend.';
+    if (grp.toString().includes('1-0') || grp.toString().includes('1-2')) return 'Grupo de artículos';
+    if (fact.toString().trim() !== '' && fact.toString().trim() !== '0') return 'Pend. Anular Factura';
+    return 'Sin dato / Otro';
+  }
+  function accion1(r) {
+    const mot = motivoPend(r);
+    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
+    const isPriority = PRIORITY_PLAZOS.some(p => plazo.includes(p.split(' ')[0]));
+    if (mot === 'En Existencia y en Sistema') return 'Validar en sistema y procesar picking';
+    if (mot === 'Orden de compra en Sistema') return 'Validar columna días desde OC; gestionar recepción';
+    if (mot === 'Entrega a Obra') return 'Validar si llegó material; actualizar status';
+    if (mot === 'Pend. Anular Factura') return 'Seguimiento con cancelaciones';
+    if (mot === 'Artículos con picking pend.') return '¿Existe o no se contabiliza? Gestionar resguardo';
+    if (mot === 'Grupo de artículos') return 'Actualizar motivo correcto';
+    return isPriority ? '⚡ Atención inmediata requerida' : 'Revisar con almacén';
+  }
+  function accion2(r) {
+    const mot = motivoPend(r);
+    if (mot === 'En Existencia y en Sistema') return 'Si sin OC: Picking Justificado; si no: Picking sin seguimiento';
+    if (mot === 'Orden de compra en Sistema') return 'Agregar comentario con fecha estimada de abasto';
+    if (mot === 'Entrega a Obra') return 'Si > 10 días: verificar si en cero; generar OC si no hay entrada';
+    if (mot === 'Artículos con picking pend.') return 'Revisar si hay traspaso o gestionan proceso de resguardo';
+    return '—';
+  }
+  function validacion(r) {
+    const mot = motivoPend(r);
+    if (mot === 'Grupo de artículos' || mot === 'Artículos con picking pend.') return 'Actualizar motivo correcto';
+    if (mot === 'Pend. Anular Factura') return 'Confirmar cancelación con área de facturación';
+    if (mot === 'En Existencia y en Sistema') return 'Calcular días pendiente; mostrar en tabla';
+    return 'Validar cantidad propia y mencionar cobertura';
+  }
+  function comentario(r) {
+    const cant = col(r,'Cantidad Pendiente') || '';
+    const mot = motivoPend(r);
+    const plazo = col(r,'Plazo de Entrega') || '';
+    return `Pend. ${cant} uds · ${mot} · ${plazo} · Sin existencia considerando esto para demás condiciones`;
+  }
+
+  return FILTERED.map(r => {
+    const plazo = col(r,'Plazo de Entrega') || '';
+    const isPriority = PRIORITY_PLAZOS.some(p => plazo.toUpperCase().includes(p.split(' ')[0]));
+    return {
+      Pedido: col(r,'Numero de Pedido') || '',
+      Codigo: col(r,'Codigo') || col(r,'Material') || '',
+      Centro: col(r,'Centro') || '',
+      'Org. Ventas': col(r,'Organizacion de Ventas') || '',
+      Transaccion: col(r,'Transaccion') || '',
+      Plazo: plazo,
+      Prioridad: isPriority ? 'SÍ' : 'NO',
+      'Cant. Pendiente': parseFloat(col(r,'Cantidad Pendiente')) || 0,
+      'Costo Pendiente': parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0,
+      'Motivo Pendiente': motivoPend(r),
+      'Acción 1': accion1(r),
+      'Acción 2': accion2(r),
+      'Validación': validacion(r),
+      'Comentario a Agregar': comentario(r)
+    };
+  });
+}
+
+function _buildRenglonFileSuffix() {
+  const org = (document.getElementById('filter-org')?.value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const centro = (document.getElementById('filter-centro')?.value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const parts = [];
+  if (org) parts.push(org);
+  if (centro) parts.push(centro);
+  if (parts.length === 0) parts.push('TODOS');
+  const fecha = new Date().toISOString().slice(0,10);
+  return `${parts.join('-')}_${fecha}`;
+}
+
+function downloadRenglonExcel() {
+  if (!FILTERED || FILTERED.length === 0) {
+    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
+    return;
+  }
+  const data = _buildRenglonDownloadRows();
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [
+    {wch:14},{wch:12},{wch:10},{wch:18},{wch:14},{wch:22},{wch:9},
+    {wch:12},{wch:14},{wch:28},{wch:42},{wch:42},{wch:32},{wch:60}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Detalle Renglón');
+  const suf = _buildRenglonFileSuffix();
+  XLSX.writeFile(wb, `Detalle_Renglon_${suf}.xlsx`);
+  showToast(`✅ Excel descargado (${fmt(data.length)} renglones)`);
+}
+
+function downloadRenglonCSV() {
+  if (!FILTERED || FILTERED.length === 0) {
+    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
+    return;
+  }
+  const data = _buildRenglonDownloadRows();
+  if (data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const esc = v => {
+    const s = (v === null || v === undefined) ? '' : String(v);
+    return /[",\n;]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+  const csv = '\uFEFF' + [
+    headers.join(','),
+    ...data.map(row => headers.map(h => esc(row[h])).join(','))
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Detalle_Renglon_${_buildRenglonFileSuffix()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ CSV descargado (${fmt(data.length)} renglones)`);
+}
+
+function downloadRenglonHTML() {
+  if (!FILTERED || FILTERED.length === 0) {
+    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
+    return;
+  }
+  const tabla = document.getElementById('renglon-detail-table');
+  if (!tabla || !tabla.innerHTML.trim()) {
+    showToast('⚠️ Tabla vacía.');
+    return;
+  }
+  const tablaHTML = tabla.innerHTML;
+  const data = _buildRenglonDownloadRows();
+  const org = document.getElementById('filter-org')?.value || '';
+  const centro = document.getElementById('filter-centro')?.value || '';
+  const filtros = [];
+  if (org) filtros.push(`Org. Ventas: <strong>${org}</strong>`);
+  if (centro) filtros.push(`Centro: <strong>${centro}</strong>`);
+  const filtrosTxt = filtros.length > 0 ? filtros.join(' &middot; ') : 'Sin filtros (todos los datos)';
+  const fecha = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+
+  const totalCosto = data.reduce((a,b) => a + (b['Costo Pendiente']||0), 0);
+  const totalCant = data.reduce((a,b) => a + (b['Cant. Pendiente']||0), 0);
+  const pedidosUnicos = new Set(data.map(d => d.Pedido)).size;
+  const centrosUnicos = new Set(data.map(d => d.Centro).filter(Boolean)).size;
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Detalle a Nivel Rengl&oacute;n</title>
+<style>
+  :root {
+    --bg: #f4f6fa; --bg2: #ffffff;
+    --accent: #e05c00; --accent3: #0284c7;
+    --text: #1e2130; --text2: #4a5568; --text3: #718096;
+    --border: #d1d8e8; --border2: #b8c2d8;
+    --kumo: #0284c7; --vtas: #7c3aed;
+    --danger: #dc2626; --success: #16a34a; --warn: #d97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
+  .container { max-width: 1600px; margin: 0 auto; background: var(--bg2); border-radius: 10px; padding: 24px 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  h1 { font-size: 20px; color: var(--accent); margin-bottom: 6px; font-weight: 700; }
+  .meta { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .filtro-box { background: #f8fafd; border: 1px dashed var(--border2); padding: 10px 14px; border-radius: 8px; margin: 12px 0 18px; font-size: 13px; color: var(--text2); }
+  .filtro-box strong { color: var(--accent3); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: #f8fafd; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .kpi-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+  .kpi-val { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
+  .kpi-val.accent { color: var(--accent); }
+  .kpi-val.kumo { color: var(--kumo); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th { background: #f0f4fb; color: var(--text); font-weight: 700; padding: 8px 6px; text-align: left; border-bottom: 2px solid var(--border2); position: sticky; top: 0; }
+  tbody td { padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(odd) { background: #fff; }
+  tbody tr:nth-child(even) { background: #f8fafd; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); text-align: center; }
+  @media print { body { background: #fff; padding: 0; } .container { box-shadow: none; border-radius: 0; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>&#128203; Detalle a Nivel Rengl&oacute;n &mdash; An&aacute;lisis Completo</h1>
+  <div class="meta">Generado el ${fecha} &middot; Dashboard Picking Pendiente GK</div>
+
+  <div class="filtro-box">
+    <strong style="color:var(--accent);">Filtros aplicados:</strong> ${filtrosTxt}
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-lbl">Renglones</div><div class="kpi-val">${fmt(data.length)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Pedidos &Uacute;nicos</div><div class="kpi-val kumo">${fmt(pedidosUnicos)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Centros</div><div class="kpi-val">${fmt(centrosUnicos)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Cant. Pendiente</div><div class="kpi-val">${fmt(totalCant)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Costo Pendiente</div><div class="kpi-val accent">$${fmtM(totalCosto)}</div></div>
+  </div>
+
+  ${tablaHTML}
+
+  <div class="footer">
+    Informe generado desde Dashboard Picking Pendiente &middot; Francisco Javier Cerezo Ramos &middot; ${fecha}
+  </div>
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Detalle_Renglon_${_buildRenglonFileSuffix()}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ HTML con formato descargado (${fmt(data.length)} renglones)`);
 }
 
 function renderAll() {
@@ -3676,42 +3942,143 @@ function renderEmailBody() {
     }
   }
 
-  // Centros afectados por filtros activos
+  // ============================================
+  // TABLA UNIFICADA: CENTROS DESGLOSADOS CON KPIs + COMPARACIÓN
+  // Reemplaza el bloque viejo de "Centros incluidos" (lista plana) por una
+  // tabla con una fila POR CENTRO que muestra:
+  //   Centro · Org · Pedidos únicos · Renglones · Costo Venta · % del total
+  //   · ✅ Cerrados · 🆕 Nuevos   (estas dos últimas solo si hay comparación)
+  // Respeta los filtros activos del dashboard (filter-org + filter-centro).
+  // ============================================
   const centroFiltroActivo = document.getElementById('filter-centro')?.value || '';
   const orgFiltroActivo = document.getElementById('filter-org')?.value || '';
-  const centrosAfectados = [...new Set(FILTERED.map(r => col(r,'Centro')).filter(Boolean))].sort();
   const filtrosActivos = [];
   if (orgFiltroActivo) filtrosActivos.push(`Org. Ventas: <strong>${orgFiltroActivo}</strong>`);
   if (centroFiltroActivo) filtrosActivos.push(`Centro: <strong>${centroFiltroActivo}</strong>`);
 
-  let centrosAfectadosBlock = '';
-  if (centrosAfectados.length > 0 && centrosAfectados.length <= 50) {
-    const centrosByOrg = {};
-    FILTERED.forEach(r => {
-      const o = col(r,'Organizacion de Ventas') || '(Sin org)';
-      const c = col(r,'Centro') || '';
-      if (c) {
-        if (!centrosByOrg[o]) centrosByOrg[o] = new Set();
-        centrosByOrg[o].add(c);
+  // 1) Agregar FILTERED por centro (datos del corte actual)
+  const byCentro = {};
+  FILTERED.forEach(r => {
+    const c = col(r,'Centro') || '(Sin centro)';
+    const o = col(r,'Organizacion de Ventas') || '(Sin org)';
+    const ped = col(r,'Numero de Pedido');
+    const costo = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
+    if (!byCentro[c]) byCentro[c] = { org: o, peds: new Set(), renglones: 0, costo: 0 };
+    byCentro[c].peds.add(ped);
+    byCentro[c].renglones++;
+    byCentro[c].costo += costo;
+  });
+
+  // 2) Calcular Cerrados / Nuevos por centro (si hay estado de comparación)
+  const cerradosByC = {};
+  const nuevosByC = {};
+  let hayComparacion = false;
+  if (cs && cs.cA && cs.cB) {
+    let listA = (cs.cA.pedidoCodigoList || []).slice();
+    let listB = (cs.cB.pedidoCodigoList || []).slice();
+    if (listA.length > 0 || listB.length > 0) {
+      // Aplicar mismos filtros activos sobre la comparación
+      if (centroFiltroActivo) {
+        listA = listA.filter(x => x.cen === centroFiltroActivo);
+        listB = listB.filter(x => x.cen === centroFiltroActivo);
       }
-    });
-    const centroRows = Object.entries(centrosByOrg).sort((a,b)=>a[0].localeCompare(b[0])).map(([org, cs], i) => {
-      return `<tr style="background:${i%2===0?'#EBF5FB':'#fff'};">
-        <td style="padding:4px 10px;font-weight:bold;color:#1F3864;">${org}</td>
-        <td style="padding:4px 10px;font-size:9pt;color:#333;">${[...cs].sort().join(', ')}</td>
+      if (orgFiltroActivo) {
+        const odA = cs.cA.orgData || {}, odB = cs.cB.orgData || {};
+        listA = listA.filter(x => odA[x.cen] === orgFiltroActivo);
+        listB = listB.filter(x => odB[x.cen] === orgFiltroActivo);
+      }
+      const keyFn = x => x.ped + '||' + x.cod + '||' + x.cen;
+      const setA = new Set(listA.map(keyFn));
+      const setB = new Set(listB.map(keyFn));
+      listA.filter(x => !setB.has(keyFn(x))).forEach(x => {
+        cerradosByC[x.cen] = (cerradosByC[x.cen] || 0) + 1;
+      });
+      listB.filter(x => !setA.has(keyFn(x))).forEach(x => {
+        nuevosByC[x.cen] = (nuevosByC[x.cen] || 0) + 1;
+      });
+      hayComparacion = (listA.length > 0 || listB.length > 0);
+    }
+  }
+
+  // 3) Combinar: lista de centros = filtrados + centros con cerrados/nuevos
+  const allCentros = new Set([
+    ...Object.keys(byCentro),
+    ...Object.keys(cerradosByC),
+    ...Object.keys(nuevosByC)
+  ]);
+
+  // 4) Construir filas (ordenadas por costo DESC)
+  const centroRows = [...allCentros].map(cen => {
+    const d = byCentro[cen] || { org: '—', peds: new Set(), renglones: 0, costo: 0 };
+    return {
+      cen,
+      org: d.org,
+      peds: d.peds.size,
+      renglones: d.renglones,
+      costo: d.costo,
+      pct: totalCosto > 0 ? (d.costo / totalCosto) * 100 : 0,
+      cerrados: cerradosByC[cen] || 0,
+      nuevos: nuevosByC[cen] || 0
+    };
+  }).sort((a, b) => b.costo - a.costo);
+
+  // 5) Totales para fila de pie
+  const totRenglones = centroRows.reduce((a,b) => a + b.renglones, 0);
+  const totPeds = centroRows.reduce((a,b) => a + b.peds, 0);
+  const totCostoT = centroRows.reduce((a,b) => a + b.costo, 0);
+  const totCerrados = centroRows.reduce((a,b) => a + b.cerrados, 0);
+  const totNuevos = centroRows.reduce((a,b) => a + b.nuevos, 0);
+
+  let detalleCentroBlock = '';
+  if (centroRows.length > 0) {
+    const colsCompHead = hayComparacion
+      ? `<th style="padding:7px 8px;text-align:center;background:#1E8449;color:#fff;">✅ Cerrados</th>
+         <th style="padding:7px 8px;text-align:center;background:#B8860B;color:#fff;">🆕 Nuevos</th>`
+      : '';
+    const colspanTotal = hayComparacion ? 7 : 5;
+
+    const rowsHtml = centroRows.map((o, i) => {
+      const bg = i % 2 === 0 ? '#EBF5FB' : '#fff';
+      const colsComp = hayComparacion
+        ? `<td style="padding:5px 8px;text-align:center;font-weight:bold;color:#1E8449;">${o.cerrados > 0 ? fmt(o.cerrados) : '—'}</td>
+           <td style="padding:5px 8px;text-align:center;font-weight:bold;color:#B8860B;">${o.nuevos > 0 ? fmt(o.nuevos) : '—'}</td>`
+        : '';
+      return `<tr style="background:${bg};">
+        <td style="padding:5px 8px;font-weight:bold;color:#0284c7;">${o.cen}</td>
+        <td style="padding:5px 8px;font-size:9pt;color:#1F3864;">${o.org}</td>
+        <td style="padding:5px 8px;text-align:center;">${fmt(o.peds)}</td>
+        <td style="padding:5px 8px;text-align:center;">${fmt(o.renglones)}</td>
+        <td style="padding:5px 8px;text-align:center;font-weight:bold;color:#1F3864;">$${fmtM(o.costo)}</td>
+        <td style="padding:5px 8px;text-align:center;color:#C55A11;font-weight:bold;">${o.pct.toFixed(1)}%</td>
+        ${colsComp}
       </tr>`;
     }).join('');
-    centrosAfectadosBlock = `
-<p><strong>Centros incluidos en este corte${filtrosActivos.length > 0 ? ' ('+filtrosActivos.join(', ')+')' : ''}:</strong></p>
-<table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:9pt;border:1px solid #BDC3C7;margin-bottom:16px;">
+
+    const filaTotal = `<tr style="background:#D6EAF8;border-top:2px solid #1F3864;">
+      <td colspan="2" style="padding:7px 8px;font-weight:bold;color:#1F3864;text-transform:uppercase;font-size:9pt;">Total${filtrosActivos.length > 0 ? ' filtrado' : ''}</td>
+      <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#1F3864;">${fmt(totPeds)}</td>
+      <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#1F3864;">${fmt(totRenglones)}</td>
+      <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#C55A11;">$${fmtM(totCostoT)}</td>
+      <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#1F3864;">100.0%</td>
+      ${hayComparacion ? `<td style="padding:7px 8px;text-align:center;font-weight:bold;color:#1E8449;">${fmt(totCerrados)}</td>
+                          <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#B8860B;">${fmt(totNuevos)}</td>` : ''}
+    </tr>`;
+
+    detalleCentroBlock = `
+<p><strong>Detalle desglosado por Centro${filtrosActivos.length > 0 ? ' ('+filtrosActivos.join(', ')+')' : ''}:</strong></p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:9.5pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
-    <th style="padding:6px 10px;text-align:left;">Organización</th>
-    <th style="padding:6px 10px;text-align:left;">Centros Afectados</th>
+    <th style="padding:7px 8px;text-align:left;">Centro</th>
+    <th style="padding:7px 8px;text-align:left;">Org. Ventas</th>
+    <th style="padding:7px 8px;text-align:center;">Pedidos Únicos</th>
+    <th style="padding:7px 8px;text-align:center;">Renglones</th>
+    <th style="padding:7px 8px;text-align:center;">Costo de Venta</th>
+    <th style="padding:7px 8px;text-align:center;">% del total</th>
+    ${colsCompHead}
   </tr>
-  ${centroRows}
+  ${rowsHtml}
+  ${filaTotal}
 </table>`;
-  } else if (centrosAfectados.length > 50) {
-    centrosAfectadosBlock = `<p><em>Centros incluidos: <strong>${fmt(centrosAfectados.length)}</strong> centros activos en el corte${filtrosActivos.length > 0 ? ' ('+filtrosActivos.join(', ')+')' : ''}.</em></p>`;
   }
 
   // Tabla de pedidos únicos y renglones por organización
@@ -3749,7 +4116,7 @@ function renderEmailBody() {
   </tr>
 </table>
 
-${centrosAfectadosBlock}
+${detalleCentroBlock}
 
 <p><strong>Pedidos únicos, renglones, costo de venta y % del total de KNO por sucursal:</strong></p>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
@@ -3816,6 +4183,10 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
+
+
+
 
 
 
