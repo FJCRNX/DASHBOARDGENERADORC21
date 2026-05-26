@@ -6,6 +6,8 @@
 <title>Dashboard Picking Pendiente — GK</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
     --bg: #f4f6fa; --bg2: #ffffff; --bg3: #eef1f7; --bg4: #e4e8f2;
@@ -232,6 +234,92 @@
   /* MODAL CONFIRM ELIMINAR */
   #modal-confirm { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 600; align-items: center; justify-content: center; }
   #modal-confirm.open { display: flex; }
+
+  /* ========== ANALIZADOR PICKING — Estilos ========== */
+  #analizador-tab { display: none; }
+  #analizador-tab.active { display: block; }
+  .anz-container { padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+  .anz-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .anz-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 12px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: relative; overflow: hidden; }
+  .anz-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--accent3); }
+  .anz-card .anz-val { font-size: 24px; font-weight: 800; color: var(--text); }
+  .anz-card .anz-val.anz-red { color: var(--danger); }
+  .anz-card .anz-val.anz-green { color: var(--success); }
+  .anz-card .anz-val.anz-yellow { color: var(--warn); }
+  .anz-card .anz-lbl { font-size: 10px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+  .anz-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 900px) { .anz-grid2 { grid-template-columns: 1fr; } }
+  .anz-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .anz-panel-title { font-size: 11px; font-weight: 700; color: var(--accent3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+  .anz-bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .anz-bar-lbl { width: 150px; font-size: 11px; color: var(--text2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .anz-bar-track { flex: 1; height: 13px; background: var(--bg3); border-radius: 100px; overflow: hidden; }
+  .anz-bar-fill { height: 100%; background: var(--accent3); border-radius: 100px; transition: width 0.4s; }
+  .anz-bar-fill.anz-red { background: var(--danger); }
+  .anz-bar-fill.anz-green { background: var(--success); }
+  .anz-bar-fill.anz-yellow { background: var(--warn); }
+  .anz-bar-fill.anz-gray { background: var(--text3); }
+  .anz-bar-val { width: 48px; font-size: 11px; font-weight: 700; color: var(--text); text-align: right; flex-shrink: 0; }
+
+  .anz-sec-hdr { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; flex-wrap: wrap; gap: 8px; }
+  .anz-sec-hdr h2 { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.4px; }
+  .anz-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.15s; white-space: nowrap; }
+  .anz-btn:hover { opacity: 0.85; }
+  .anz-btn:disabled { opacity: 0.4; cursor: default; }
+  .anz-btn-green { background: var(--success); color: #fff; }
+  .anz-btn-outline { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); }
+
+  .anz-tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); }
+  .anz-tbl-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .anz-tbl-wrap th { background: var(--accent); color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; position: sticky; top: 0; }
+  .anz-tbl-wrap td { padding: 7px 10px; border-bottom: 1px solid var(--bg3); font-size: 12px; vertical-align: middle; color: var(--text); }
+  .anz-tbl-wrap tr:last-child td { border-bottom: none; }
+  .anz-tbl-wrap tr.anz-clickable { cursor: pointer; }
+  .anz-tbl-wrap tr.anz-clickable:hover td { background: var(--bg3); }
+  .anz-tbl-wrap tr.anz-active-row td { background: rgba(2,132,199,0.12) !important; }
+
+  .anz-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
+  .anz-b-alerta { background: #fee2e2; color: #991b1b; }
+  .anz-b-ok { background: #dcfce7; color: #166534; }
+  .anz-b-info { background: #fef9c3; color: #92400e; }
+  .anz-b-na { background: #f1f5f9; color: #64748b; }
+
+  .anz-detail-panel { background: var(--bg2); border: 1px solid var(--accent3); border-radius: 10px; padding: 16px; margin-top: 16px; box-shadow: 0 2px 8px rgba(2,132,199,0.08); }
+  .anz-detail-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .anz-detail-hdr h3 { font-size: 15px; font-weight: 700; color: var(--accent3); }
+  .anz-detail-hdr .anz-meta { font-size: 11px; color: var(--text2); }
+
+  .anz-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+  .anz-filters span { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .anz-f-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 100px; background: var(--bg2); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text2); transition: all 0.15s; }
+  .anz-f-btn:hover { border-color: var(--accent3); }
+  .anz-f-btn.anz-on { background: var(--accent3); color: #fff; border-color: var(--accent3); }
+  .anz-f-btn.anz-on.anz-red { background: var(--danger); border-color: var(--danger); }
+  .anz-f-btn.anz-on.anz-green { background: var(--success); border-color: var(--success); }
+  .anz-f-btn.anz-on.anz-yellow { background: var(--warn); border-color: var(--warn); }
+
+  .anz-pag { display: flex; gap: 4px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .anz-p-btn { padding: 4px 10px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); border-radius: 4px; cursor: pointer; font-size: 11px; }
+  .anz-p-btn:hover { background: var(--bg3); }
+  .anz-p-btn.anz-on { background: var(--accent3); color: #fff; border-color: var(--accent3); }
+  .anz-p-btn:disabled { opacity: 0.4; cursor: default; }
+  .anz-pag-info { font-size: 11px; color: var(--text2); margin-left: 6px; }
+
+  .anz-pct-hi { color: var(--danger); font-weight: 700; }
+  .anz-pct-md { color: var(--warn); font-weight: 700; }
+  .anz-pct-lo { color: var(--success); font-weight: 700; }
+
+  .anz-file-bar { background: rgba(2,132,199,0.08); border: 1px solid var(--accent3); border-radius: 6px; padding: 8px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 12px; color: var(--accent3); }
+  .anz-empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .anz-empty .ei { font-size: 48px; margin-bottom: 12px; }
+
+  .anz-cfg { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  .anz-fg { display: flex; flex-direction: column; gap: 4px; }
+  .anz-fg label { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .anz-fg input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); background: #fff; min-width: 160px; }
+
 </style>
 </head>
 <body>
@@ -319,14 +407,120 @@
 </div>
 
 <!-- TABS NAVIGATION -->
-<div class="tabs-nav" id="tabs-nav" style="display:none;">
-  <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard-tab')">📊 Dashboard</button>
+<div class="tabs-nav" id="tabs-nav" style="display:flex;">
+  <button class="tab-btn active" id="tab-btn-analizador" onclick="switchTab('analizador-tab')">📦 Analizador de Acciones</button>
+  <button class="tab-btn" id="tab-btn-dashboard" onclick="switchTab('dashboard-tab')">📊 Dashboard</button>
   <button class="tab-btn" id="tab-btn-historial" onclick="switchTab('historial-tab')">🗂️ Historial de Cargas</button>
   <button class="tab-btn" id="tab-btn-comparacion" onclick="switchTab('comparacion-tab')">📈 Comparación</button>
 </div>
 
+
+<!-- ========== TAB: ANALIZADOR DE ACCIONES ========== -->
+<div id="analizador-tab" class="tab-panel active">
+  <div class="anz-container">
+
+    <!-- Configuración fecha de reporte -->
+    <div class="anz-cfg" id="anz-cfg-row">
+      <div class="anz-fg">
+        <label>Fecha del Reporte (referencia para días)</label>
+        <input type="date" id="anz-report-date">
+      </div>
+      <button class="anz-btn anz-btn-outline" onclick="anzRefresh()" id="anz-refresh-btn" style="display:none;">🔄 Recalcular</button>
+    </div>
+
+    <!-- Estado vacío -->
+    <div id="anz-empty" class="anz-empty">
+      <div class="ei">📦</div>
+      <div style="font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px;">Sin datos cargados</div>
+      <div style="font-size:13px;">Carga un archivo Excel en la pestaña <strong style="color:var(--accent3)">Dashboard</strong> para generar el análisis de acciones por renglón.</div>
+      <button class="anz-btn anz-btn-outline" style="margin-top:18px;" onclick="switchTab('dashboard-tab')">📊 Ir a cargar archivo</button>
+    </div>
+
+    <!-- Contenido del analizador -->
+    <div id="anz-content" style="display:none;">
+
+      <div class="anz-file-bar" id="anz-file-bar"></div>
+
+      <!-- Tarjetas de resumen -->
+      <div class="anz-cards" id="anz-cards"></div>
+
+      <!-- Gráficas de barras -->
+      <div class="anz-grid2">
+        <div class="anz-panel">
+          <div class="anz-panel-title">Distribución por Plazo de Entrega</div>
+          <div id="anz-bars-plazo"></div>
+        </div>
+        <div class="anz-panel">
+          <div class="anz-panel-title">Distribución de Estatus</div>
+          <div id="anz-bars-estado"></div>
+        </div>
+      </div>
+
+      <!-- Tabla de centros -->
+      <div class="anz-sec-hdr">
+        <h2>Resumen por Centro</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="anz-btn anz-btn-green" onclick="anzExportZip()" id="anz-btn-export">⬇ Descargar ZIP por Organización</button>
+        </div>
+      </div>
+      <div class="anz-tbl-wrap" style="margin-bottom:6px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Centro</th><th>Org. Ventas</th><th style="text-align:right;">Total</th>
+              <th style="text-align:right;">🔴 Alerta</th><th style="text-align:right;">🟢 OK</th>
+              <th style="text-align:right;">🟡 Info</th><th style="text-align:right;">⚪ N/A</th>
+              <th style="text-align:right;">% Alerta</th>
+            </tr>
+          </thead>
+          <tbody id="anz-centros-tbody"></tbody>
+        </table>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:16px;">Haz clic en un centro para ver el detalle de sus renglones.</p>
+
+      <!-- Panel de detalle del centro seleccionado -->
+      <div class="anz-detail-panel" id="anz-detail-panel" style="display:none;">
+        <div class="anz-detail-hdr">
+          <span style="font-size:20px;">🏭</span>
+          <div>
+            <h3 id="anz-dp-title"></h3>
+            <div class="anz-meta" id="anz-dp-meta"></div>
+          </div>
+          <button class="anz-btn anz-btn-outline" style="margin-left:auto;font-size:11px;padding:5px 12px;" onclick="anzCloseDetail()">✕ Cerrar</button>
+        </div>
+
+        <div class="anz-filters">
+          <span>Filtrar:</span>
+          <button class="anz-f-btn anz-on" data-f="ALL" onclick="anzApplyFilter('ALL',this)">Todos</button>
+          <button class="anz-f-btn" data-f="ALERTA" onclick="anzApplyFilter('ALERTA',this)">🔴 Alerta</button>
+          <button class="anz-f-btn" data-f="OK" onclick="anzApplyFilter('OK',this)">🟢 OK</button>
+          <button class="anz-f-btn" data-f="INFO" onclick="anzApplyFilter('INFO',this)">🟡 Info</button>
+          <button class="anz-f-btn" data-f="N/A" onclick="anzApplyFilter('N/A',this)">⚪ N/A</button>
+        </div>
+
+        <div class="anz-tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Org</th><th>No. Pedido</th><th>Rgl.</th>
+                <th>Código</th><th>Descripción</th><th>Plazo de Entrega</th>
+                <th>Fec. Registro</th><th style="text-align:right;">Cant. Pend.</th>
+                <th style="text-align:right;">Cant. Propia</th><th style="text-align:right;">Traspaso</th>
+                <th style="text-align:right;">OC</th><th>Estado</th><th>Comentario / Acción</th>
+              </tr>
+            </thead>
+            <tbody id="anz-dp-tbody"></tbody>
+          </table>
+        </div>
+        <div class="anz-pag" id="anz-dp-pag"></div>
+      </div>
+
+    </div><!-- end anz-content -->
+  </div>
+</div>
+
 <!-- ========== TAB: DASHBOARD ========== -->
-<div id="dashboard-tab" class="tab-panel active">
+<div id="dashboard-tab" class="tab-panel">
 <!-- DASHBOARD -->
 <div id="dashboard">
 
@@ -465,35 +659,6 @@
     <button class="btn-copy" onclick="copySection('acuerdos-grid', 'acuerdos', this)">📋 Copiar</button>
   </div>
   <div class="acuerdos-grid" id="acuerdos-grid"></div>
-
-  <!-- TABLA A NIVEL RENGLÓN -->
-  <div class="section-header" style="margin-top:28px;">
-    <div class="section-title">📋 Detalle a Nivel Renglón — Análisis Completo</div>
-    <button class="btn-copy" onclick="copyTableSection('renglon-detail-table', this)">📋 Copiar tabla</button>
-  </div>
-  <div class="chart-card" id="renglon-detail-section">
-    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--text2);">Filtros activos afectan esta tabla. Muestra motivo pendiente, días desde OC, acciones sugeridas y comentario por renglón.</span>
-      <span style="font-size:11px;color:var(--text3);" id="renglon-count-badge"></span>
-    </div>
-
-    <!-- Botones de descarga (respetan filtros activos) -->
-    <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:#f8fafd;border:1px dashed var(--border2);border-radius:8px;">
-      <span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;">⬇ Descargar tabla filtrada:</span>
-      <button class="btn-download-renglon" onclick="downloadRenglonExcel()" style="background:#16a34a;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
-        <span>📊</span> Excel (.xlsx)
-      </button>
-      <button class="btn-download-renglon" onclick="downloadRenglonHTML()" style="background:#0284c7;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
-        <span>🌐</span> HTML con formato
-      </button>
-      <button class="btn-download-renglon" onclick="downloadRenglonCSV()" style="background:#e05c00;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
-        <span>📄</span> CSV
-      </button>
-      <span id="renglon-download-info" style="font-size:11px;color:var(--text3);margin-left:auto;"></span>
-    </div>
-
-    <div class="table-wrap" id="renglon-detail-table" style="max-height:480px;overflow-y:auto;"></div>
-  </div>
 
   <!-- SECCIÓN: CUERPO DE CORREO -->
   <div class="section-header" style="margin-top:36px;">
@@ -1663,387 +1828,6 @@ function fmtM(n) { return '$' + (n >= 1e6 ? (n/1e6).toFixed(2) + 'M' : fmt(n)); 
 function fmtK(n) { return n >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(1) + 'K' : '$' + Math.round(n); }
 
 // ===== RENDER ALL =====
-// ===== TABLA A NIVEL RENGLÓN (se regenera tras cada carga y con filtros) =====
-function renderRenglonDetail() {
-  const el = document.getElementById('renglon-detail-table');
-  const badge = document.getElementById('renglon-count-badge');
-  if (!el) return;
-  if (FILTERED.length === 0) {
-    el.innerHTML = '<p style="color:var(--text2);padding:12px;">Carga un archivo Excel para ver el detalle a nivel renglón.</p>';
-    if (badge) badge.textContent = '';
-    return;
-  }
-
-  // Columnas de la imagen: Motivo Pend., Acción 1, Acción 2, Validación, Comentario a agregar
-  // Derivar lógica basada en los campos disponibles
-  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
-
-  function motivoPend(r) {
-    const en = (col(r,'En existencia') || col(r,'Existencia') || '').toString().trim().toLowerCase();
-    const oc = parseFloat(col(r,'Orden de compra') || col(r,'OC') || col(r,'Num OC') || 0) || 0;
-    const trasp = parseFloat(col(r,'Traspaso') || col(r,'Cant Traspaso') || 0) || 0;
-    const mat = col(r,'Material en curso') || col(r,'Material Curso') || '';
-    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
-    const grp = col(r,'Grupo de articulos') || col(r,'Grupo articulos 1-0') || '';
-    const fact = col(r,'Pend Anular Factura') || col(r,'Factura') || '';
-    const no_cnt = (col(r,'Artículos con picking pend. de ap') || '').toString().toLowerCase();
-
-    if (en === 'si' || en === 'sí' || en === 'yes' || en === '1') return 'En Existencia y en Sistema';
-    if (oc > 0 || trasp > 0) return 'Orden de compra en Sistema';
-    if (mat && mat.toString().trim() !== '' && mat.toString().trim() !== '0') return 'Entrega a Obra';
-    if (no_cnt.includes('0') || no_cnt === '') return 'Artículos con picking pend.';
-    if (grp.toString().includes('1-0') || grp.toString().includes('1-2')) return 'Grupo de artículos';
-    if (fact.toString().trim() !== '' && fact.toString().trim() !== '0') return 'Pend. Anular Factura';
-    return 'Sin dato / Otro';
-  }
-
-  function accion1(r) {
-    const mot = motivoPend(r);
-    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
-    const isPriority = PRIORITY_PLAZOS.some(p => plazo.includes(p.split(' ')[0]));
-    if (mot === 'En Existencia y en Sistema') return 'Validar en sistema y procesar picking';
-    if (mot === 'Orden de compra en Sistema') return 'Validar columna días desde OC; gestionar recepción';
-    if (mot === 'Entrega a Obra') return 'Validar si llegó material; actualizar status';
-    if (mot === 'Pend. Anular Factura') return 'Seguimiento con cancelaciones';
-    if (mot === 'Artículos con picking pend.') return '¿Existe o no se contabiliza? Gestionar resguardo';
-    if (mot === 'Grupo de artículos') return 'Actualizar motivo correcto';
-    return isPriority ? '⚡ Atención inmediata requerida' : 'Revisar con almacén';
-  }
-
-  function accion2(r) {
-    const mot = motivoPend(r);
-    if (mot === 'En Existencia y en Sistema') return 'Si sin OC: Picking Justificado; si no: Picking sin seguimiento';
-    if (mot === 'Orden de compra en Sistema') return 'Agregar comentario con fecha estimada de abasto';
-    if (mot === 'Entrega a Obra') return 'Si > 10 días: verificar si en cero; generar OC si no hay entrada';
-    if (mot === 'Artículos con picking pend.') return 'Revisar si hay traspaso o gestionan proceso de resguardo';
-    return '—';
-  }
-
-  function validacion(r) {
-    const mot = motivoPend(r);
-    if (mot === 'Grupo de artículos' || mot === 'Artículos con picking pend.') return 'Actualizar motivo correcto';
-    if (mot === 'Pend. Anular Factura') return 'Confirmar cancelación con área de facturación';
-    if (mot === 'En Existencia y en Sistema') return 'Calcular días pendiente; mostrar en tabla';
-    return 'Validar cantidad propia y mencionar cobertura';
-  }
-
-  function comentario(r) {
-    const ped = col(r,'Numero de Pedido') || '';
-    const cod = col(r,'Codigo') || col(r,'Material') || '';
-    const cant = col(r,'Cantidad Pendiente') || '';
-    const cen = col(r,'Centro') || '';
-    const mot = motivoPend(r);
-    const plazo = col(r,'Plazo de Entrega') || '';
-    return `Pend. ${cant} uds · ${mot} · ${plazo} · Sin existencia considerando esto para demás condiciones`;
-  }
-
-  const rows = FILTERED;
-  if (badge) badge.textContent = `${fmt(rows.length)} renglones | ${new Set(rows.map(r=>col(r,'Numero de Pedido'))).size} pedidos únicos`;
-
-  let html = `<table style="min-width:1200px;table-layout:auto;">
-    <thead><tr style="background:#f0f4fb;">
-      <th style="min-width:80px;white-space:nowrap;">Pedido</th>
-      <th style="min-width:70px;">Código</th>
-      <th style="min-width:80px;">Centro</th>
-      <th style="min-width:90px;">Org. Ventas</th>
-      <th style="min-width:80px;">Transacción</th>
-      <th style="min-width:80px;">Plazo</th>
-      <th class="num" style="min-width:60px;">Cant. Pend.</th>
-      <th class="num" style="min-width:80px;">Costo Pend.</th>
-      <th style="min-width:130px;background:#e8f4fd;">Motivo Pendiente</th>
-      <th style="min-width:180px;background:#fff3e0;">Acción 1</th>
-      <th style="min-width:160px;background:#fff8e1;">Acción 2</th>
-      <th style="min-width:140px;background:#f3e5f5;">Validación</th>
-      <th style="min-width:220px;background:#e8f5e9;">Comentario a Agregar</th>
-    </tr></thead><tbody>`;
-
-  rows.slice(0, 2000).forEach((r, i) => {
-    const plazo = col(r,'Plazo de Entrega') || '';
-    const isPriority = PRIORITY_PLAZOS.some(p => plazo.toUpperCase().includes(p.split(' ')[0]));
-    const rowBg = i%2===0 ? '#fff' : '#f8fafd';
-    const priorityStyle = isPriority ? 'border-left:3px solid var(--danger);' : '';
-    const mot = motivoPend(r);
-    const tx = col(r,'Transaccion') || '';
-    const txBadge = tx === 'KUMO ENTREGAS'
-      ? `<span style="background:#dbeafe;color:var(--kumo);padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700;">KUMO</span>`
-      : `<span style="background:#ede9fe;color:var(--vtas);padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700;">VTAS</span>`;
-
-    html += `<tr style="background:${rowBg};${priorityStyle}">
-      <td style="font-size:11px;font-weight:600;">${col(r,'Numero de Pedido')||'—'}</td>
-      <td style="font-size:11px;">${col(r,'Codigo')||col(r,'Material')||'—'}</td>
-      <td style="font-size:11px;font-weight:600;color:var(--accent3);">${col(r,'Centro')||'—'}</td>
-      <td style="font-size:10px;color:var(--text2);">${col(r,'Organizacion de Ventas')||'—'}</td>
-      <td>${txBadge}</td>
-      <td style="font-size:10px;color:${isPriority?'var(--danger)':'var(--text2)'};font-weight:${isPriority?'700':'400'};">${isPriority?'⚡ ':''} ${plazo||'—'}</td>
-      <td class="num" style="font-weight:600;">${fmt(parseFloat(col(r,'Cantidad Pendiente'))||0)}</td>
-      <td class="num" style="color:var(--accent);font-weight:600;">${fmtM(parseFloat(col(r,'Costo de Venta Contable Pendiente'))||0)}</td>
-      <td style="font-size:10px;background:#e8f4fd;color:#1e4976;font-weight:600;">${mot}</td>
-      <td style="font-size:10px;background:#fff3e0;color:#7c3e00;">${accion1(r)}</td>
-      <td style="font-size:10px;background:#fff8e1;color:#6b4c00;">${accion2(r)}</td>
-      <td style="font-size:10px;background:#f3e5f5;color:#4a148c;">${validacion(r)}</td>
-      <td style="font-size:9px;background:#e8f5e9;color:#1b5e20;">${comentario(r)}</td>
-    </tr>`;
-  });
-
-  if (rows.length > 2000) {
-    html += `<tr><td colspan="13" style="text-align:center;padding:10px;font-size:11px;color:var(--text2);background:#f8fafd;">
-      ⚠️ Mostrando primeros 2,000 de ${fmt(rows.length)} renglones. Aplica filtros para reducir el conjunto.
-    </td></tr>`;
-  }
-
-  html += `</tbody></table>`;
-  el.innerHTML = html;
-
-  // Actualizar info de descarga con filtros activos
-  const dlInfo = document.getElementById('renglon-download-info');
-  if (dlInfo) {
-    const org = document.getElementById('filter-org')?.value || '';
-    const centro = document.getElementById('filter-centro')?.value || '';
-    const filtros = [];
-    if (org) filtros.push(`Org: ${org}`);
-    if (centro) filtros.push(`Centro: ${centro}`);
-    dlInfo.textContent = filtros.length > 0
-      ? `Filtros: ${filtros.join(' · ')} — ${fmt(rows.length)} renglones`
-      : `Sin filtros activos — ${fmt(rows.length)} renglones`;
-  }
-}
-
-// ============================================
-// DESCARGAS DE LA TABLA "DETALLE A NIVEL RENGLÓN"
-// (respetan filtros activos: Org. Ventas + Centro)
-// ============================================
-
-function _buildRenglonDownloadRows() {
-  const PRIORITY_PLAZOS = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
-
-  function motivoPend(r) {
-    const en = (col(r,'En existencia') || col(r,'Existencia') || '').toString().trim().toLowerCase();
-    const oc = parseFloat(col(r,'Orden de compra') || col(r,'OC') || col(r,'Num OC') || 0) || 0;
-    const trasp = parseFloat(col(r,'Traspaso') || col(r,'Cant Traspaso') || 0) || 0;
-    const mat = col(r,'Material en curso') || col(r,'Material Curso') || '';
-    const grp = col(r,'Grupo de articulos') || col(r,'Grupo articulos 1-0') || '';
-    const fact = col(r,'Pend Anular Factura') || col(r,'Factura') || '';
-    const no_cnt = (col(r,'Artículos con picking pend. de ap') || '').toString().toLowerCase();
-    if (en === 'si' || en === 'sí' || en === 'yes' || en === '1') return 'En Existencia y en Sistema';
-    if (oc > 0 || trasp > 0) return 'Orden de compra en Sistema';
-    if (mat && mat.toString().trim() !== '' && mat.toString().trim() !== '0') return 'Entrega a Obra';
-    if (no_cnt.includes('0') || no_cnt === '') return 'Artículos con picking pend.';
-    if (grp.toString().includes('1-0') || grp.toString().includes('1-2')) return 'Grupo de artículos';
-    if (fact.toString().trim() !== '' && fact.toString().trim() !== '0') return 'Pend. Anular Factura';
-    return 'Sin dato / Otro';
-  }
-  function accion1(r) {
-    const mot = motivoPend(r);
-    const plazo = (col(r,'Plazo de Entrega') || '').toUpperCase();
-    const isPriority = PRIORITY_PLAZOS.some(p => plazo.includes(p.split(' ')[0]));
-    if (mot === 'En Existencia y en Sistema') return 'Validar en sistema y procesar picking';
-    if (mot === 'Orden de compra en Sistema') return 'Validar columna días desde OC; gestionar recepción';
-    if (mot === 'Entrega a Obra') return 'Validar si llegó material; actualizar status';
-    if (mot === 'Pend. Anular Factura') return 'Seguimiento con cancelaciones';
-    if (mot === 'Artículos con picking pend.') return '¿Existe o no se contabiliza? Gestionar resguardo';
-    if (mot === 'Grupo de artículos') return 'Actualizar motivo correcto';
-    return isPriority ? '⚡ Atención inmediata requerida' : 'Revisar con almacén';
-  }
-  function accion2(r) {
-    const mot = motivoPend(r);
-    if (mot === 'En Existencia y en Sistema') return 'Si sin OC: Picking Justificado; si no: Picking sin seguimiento';
-    if (mot === 'Orden de compra en Sistema') return 'Agregar comentario con fecha estimada de abasto';
-    if (mot === 'Entrega a Obra') return 'Si > 10 días: verificar si en cero; generar OC si no hay entrada';
-    if (mot === 'Artículos con picking pend.') return 'Revisar si hay traspaso o gestionan proceso de resguardo';
-    return '—';
-  }
-  function validacion(r) {
-    const mot = motivoPend(r);
-    if (mot === 'Grupo de artículos' || mot === 'Artículos con picking pend.') return 'Actualizar motivo correcto';
-    if (mot === 'Pend. Anular Factura') return 'Confirmar cancelación con área de facturación';
-    if (mot === 'En Existencia y en Sistema') return 'Calcular días pendiente; mostrar en tabla';
-    return 'Validar cantidad propia y mencionar cobertura';
-  }
-  function comentario(r) {
-    const cant = col(r,'Cantidad Pendiente') || '';
-    const mot = motivoPend(r);
-    const plazo = col(r,'Plazo de Entrega') || '';
-    return `Pend. ${cant} uds · ${mot} · ${plazo} · Sin existencia considerando esto para demás condiciones`;
-  }
-
-  return FILTERED.map(r => {
-    const plazo = col(r,'Plazo de Entrega') || '';
-    const isPriority = PRIORITY_PLAZOS.some(p => plazo.toUpperCase().includes(p.split(' ')[0]));
-    return {
-      Pedido: col(r,'Numero de Pedido') || '',
-      Codigo: col(r,'Codigo') || col(r,'Material') || '',
-      Centro: col(r,'Centro') || '',
-      'Org. Ventas': col(r,'Organizacion de Ventas') || '',
-      Transaccion: col(r,'Transaccion') || '',
-      Plazo: plazo,
-      Prioridad: isPriority ? 'SÍ' : 'NO',
-      'Cant. Pendiente': parseFloat(col(r,'Cantidad Pendiente')) || 0,
-      'Costo Pendiente': parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0,
-      'Motivo Pendiente': motivoPend(r),
-      'Acción 1': accion1(r),
-      'Acción 2': accion2(r),
-      'Validación': validacion(r),
-      'Comentario a Agregar': comentario(r)
-    };
-  });
-}
-
-function _buildRenglonFileSuffix() {
-  const org = (document.getElementById('filter-org')?.value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const centro = (document.getElementById('filter-centro')?.value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const parts = [];
-  if (org) parts.push(org);
-  if (centro) parts.push(centro);
-  if (parts.length === 0) parts.push('TODOS');
-  const fecha = new Date().toISOString().slice(0,10);
-  return `${parts.join('-')}_${fecha}`;
-}
-
-function downloadRenglonExcel() {
-  if (!FILTERED || FILTERED.length === 0) {
-    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
-    return;
-  }
-  const data = _buildRenglonDownloadRows();
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [
-    {wch:14},{wch:12},{wch:10},{wch:18},{wch:14},{wch:22},{wch:9},
-    {wch:12},{wch:14},{wch:28},{wch:42},{wch:42},{wch:32},{wch:60}
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Detalle Renglón');
-  const suf = _buildRenglonFileSuffix();
-  XLSX.writeFile(wb, `Detalle_Renglon_${suf}.xlsx`);
-  showToast(`✅ Excel descargado (${fmt(data.length)} renglones)`);
-}
-
-function downloadRenglonCSV() {
-  if (!FILTERED || FILTERED.length === 0) {
-    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
-    return;
-  }
-  const data = _buildRenglonDownloadRows();
-  if (data.length === 0) return;
-  const headers = Object.keys(data[0]);
-  const esc = v => {
-    const s = (v === null || v === undefined) ? '' : String(v);
-    return /[",\n;]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-  };
-  const csv = '\uFEFF' + [
-    headers.join(','),
-    ...data.map(row => headers.map(h => esc(row[h])).join(','))
-  ].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Detalle_Renglon_${_buildRenglonFileSuffix()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`✅ CSV descargado (${fmt(data.length)} renglones)`);
-}
-
-function downloadRenglonHTML() {
-  if (!FILTERED || FILTERED.length === 0) {
-    showToast('⚠️ No hay datos para descargar. Carga un Excel primero.');
-    return;
-  }
-  const tabla = document.getElementById('renglon-detail-table');
-  if (!tabla || !tabla.innerHTML.trim()) {
-    showToast('⚠️ Tabla vacía.');
-    return;
-  }
-  const tablaHTML = tabla.innerHTML;
-  const data = _buildRenglonDownloadRows();
-  const org = document.getElementById('filter-org')?.value || '';
-  const centro = document.getElementById('filter-centro')?.value || '';
-  const filtros = [];
-  if (org) filtros.push(`Org. Ventas: <strong>${org}</strong>`);
-  if (centro) filtros.push(`Centro: <strong>${centro}</strong>`);
-  const filtrosTxt = filtros.length > 0 ? filtros.join(' &middot; ') : 'Sin filtros (todos los datos)';
-  const fecha = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
-
-  const totalCosto = data.reduce((a,b) => a + (b['Costo Pendiente']||0), 0);
-  const totalCant = data.reduce((a,b) => a + (b['Cant. Pendiente']||0), 0);
-  const pedidosUnicos = new Set(data.map(d => d.Pedido)).size;
-  const centrosUnicos = new Set(data.map(d => d.Centro).filter(Boolean)).size;
-
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Detalle a Nivel Rengl&oacute;n</title>
-<style>
-  :root {
-    --bg: #f4f6fa; --bg2: #ffffff;
-    --accent: #e05c00; --accent3: #0284c7;
-    --text: #1e2130; --text2: #4a5568; --text3: #718096;
-    --border: #d1d8e8; --border2: #b8c2d8;
-    --kumo: #0284c7; --vtas: #7c3aed;
-    --danger: #dc2626; --success: #16a34a; --warn: #d97706;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
-  .container { max-width: 1600px; margin: 0 auto; background: var(--bg2); border-radius: 10px; padding: 24px 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-  h1 { font-size: 20px; color: var(--accent); margin-bottom: 6px; font-weight: 700; }
-  .meta { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
-  .filtro-box { background: #f8fafd; border: 1px dashed var(--border2); padding: 10px 14px; border-radius: 8px; margin: 12px 0 18px; font-size: 13px; color: var(--text2); }
-  .filtro-box strong { color: var(--accent3); }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .kpi { background: #f8fafd; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-  .kpi-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
-  .kpi-val { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
-  .kpi-val.accent { color: var(--accent); }
-  .kpi-val.kumo { color: var(--kumo); }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  thead th { background: #f0f4fb; color: var(--text); font-weight: 700; padding: 8px 6px; text-align: left; border-bottom: 2px solid var(--border2); position: sticky; top: 0; }
-  tbody td { padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tbody tr:nth-child(odd) { background: #fff; }
-  tbody tr:nth-child(even) { background: #f8fafd; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); text-align: center; }
-  @media print { body { background: #fff; padding: 0; } .container { box-shadow: none; border-radius: 0; } }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>&#128203; Detalle a Nivel Rengl&oacute;n &mdash; An&aacute;lisis Completo</h1>
-  <div class="meta">Generado el ${fecha} &middot; Dashboard Picking Pendiente GK</div>
-
-  <div class="filtro-box">
-    <strong style="color:var(--accent);">Filtros aplicados:</strong> ${filtrosTxt}
-  </div>
-
-  <div class="kpis">
-    <div class="kpi"><div class="kpi-lbl">Renglones</div><div class="kpi-val">${fmt(data.length)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Pedidos &Uacute;nicos</div><div class="kpi-val kumo">${fmt(pedidosUnicos)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Centros</div><div class="kpi-val">${fmt(centrosUnicos)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Cant. Pendiente</div><div class="kpi-val">${fmt(totalCant)}</div></div>
-    <div class="kpi"><div class="kpi-lbl">Costo Pendiente</div><div class="kpi-val accent">$${fmtM(totalCosto)}</div></div>
-  </div>
-
-  ${tablaHTML}
-
-  <div class="footer">
-    Informe generado desde Dashboard Picking Pendiente &middot; Francisco Javier Cerezo Ramos &middot; ${fecha}
-  </div>
-</div>
-</body>
-</html>`;
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Detalle_Renglon_${_buildRenglonFileSuffix()}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`✅ HTML con formato descargado (${fmt(data.length)} renglones)`);
-}
 
 function renderAll() {
   renderGlobalKPIs();
@@ -2058,7 +1842,6 @@ function renderAll() {
   renderTopSucursales();
   renderCoberturaOC();
   renderAcuerdos();
-  renderRenglonDetail();
   renderEmailBody();
 }
 
@@ -2718,10 +2501,16 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
-  const btnMap = { 'dashboard-tab': 'tab-btn-dashboard', 'historial-tab': 'tab-btn-historial', 'comparacion-tab': 'tab-btn-comparacion' };
+  const btnMap = { 'analizador-tab': 'tab-btn-analizador', 'dashboard-tab': 'tab-btn-dashboard', 'historial-tab': 'tab-btn-historial', 'comparacion-tab': 'tab-btn-comparacion' };
   if (btnMap[tabId]) document.getElementById(btnMap[tabId]).classList.add('active');
   if (tabId === 'historial-tab') renderHistorial();
   if (tabId === 'comparacion-tab') { populateCompSelects(); }
+  if (tabId === 'analizador-tab') {
+    // Si ya hay datos cargados, refrescar; si no, mantener estado vacío
+    if (typeof RAW !== 'undefined' && RAW && RAW.length > 0 && anzAllRows.length === 0) {
+      anzProcessFromRaw();
+    }
+  }
 }
 
 // ===== MODAL CONFIRM ELIMINAR =====
@@ -4170,6 +3959,571 @@ function copyEmailBody(btn) {
   }
 }
 
+
+// ============================================================
+//  ANALIZADOR DE PICKING — INTEGRADO
+//  Procesa renglones del Excel cargado y genera análisis de acciones por
+//  plazo de entrega, estado del renglón y cobertura de pedido.
+// ============================================================
+const ANZ_PAGE_SZ = 60;
+let anzAllRows = [], anzCentroGroups = {}, anzCurrCentro = null;
+let anzCurrFilter = 'ALL', anzCurrPage = 0, anzReportDate = null;
+
+// Inicializar fecha de reporte con hoy
+(function() {
+  const di = document.getElementById('anz-report-date');
+  if (di) {
+    const t = new Date();
+    di.value = t.toISOString().slice(0, 10);
+    di.addEventListener('change', () => { if (anzAllRows.length > 0) anzRefresh(); });
+  }
+})();
+
+// Normalizar texto (sin acentos, mayúsculas, sin espacios extra)
+function anzNorm(s) {
+  return (s || '').toString().trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+}
+
+// Mapeo de zonas horarias por prefijo de centro
+const ANZ_TZ_MAP = {
+  'KN': 'America/Mazatlan',
+  'KS': 'America/Mazatlan',
+  'KC': 'America/Mexico_City',
+  'KB': 'America/Tijuana',
+  'KO': 'America/Mexico_City'
+};
+function anzGetTz(centro) {
+  return ANZ_TZ_MAP[(centro || '').toString().substring(0, 2).toUpperCase()] || 'America/Mexico_City';
+}
+function anzToTzDateStr(utcDate, tz) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(utcDate);
+}
+function anzCalendarDays(fromUtc, toUtc, tz) {
+  const strFrom = anzToTzDateStr(fromUtc, tz);
+  const strTo = anzToTzDateStr(toUtc, tz);
+  return Math.round((new Date(strTo) - new Date(strFrom)) / 86400000);
+}
+
+function anzFmt(n) { return (+n || 0).toLocaleString('es-MX'); }
+function anzParseDate(d) {
+  if (!d) return null;
+  const dt = d instanceof Date ? d : new Date(d);
+  return isNaN(dt) ? null : dt;
+}
+function anzFmtDate(d, centro) {
+  const dt = anzParseDate(d);
+  if (!dt) return '';
+  return new Intl.DateTimeFormat('es-MX', {
+    timeZone: anzGetTz(centro), day: '2-digit', month: '2-digit', year: 'numeric'
+  }).format(dt);
+}
+
+// ============================================================
+//  MOTOR DE ACCIONES POR PLAZO DE ENTREGA
+// ============================================================
+const ANZ_ACCIONES = {
+  'OCURRE': (r, rd) => {
+    const propia = +r['Cantidad Propia'] || 0;
+    const traspaso = +r['Solicitud de Traspaso'] || 0;
+    const pend = +r['Cantidad Pendiente'] || 0;
+    const msgs = []; let estado = 'OK';
+    if (propia > 0) msgs.push(`Existencia propia: ${anzFmt(propia)}`);
+    if (traspaso > 0) {
+      if (traspaso >= pend) msgs.push(`Traspaso activo: ${anzFmt(traspaso)} ✓ cubre pendiente`);
+      else { msgs.push(`Traspaso activo: ${anzFmt(traspaso)} ✗ NO cubre pendiente (${anzFmt(pend)})`); estado = 'ALERTA'; }
+    }
+    if (!propia && !traspaso) { msgs.push('Sin existencia propia ni traspaso activo'); estado = 'ALERTA'; }
+    return { estado, comentario: msgs.join(' | ') };
+  },
+  'ENVIO A DOMICILIO': (r, rd) => {
+    const fechaReg = anzParseDate(r['Fecha de Registro']);
+    if (!fechaReg) return { estado: 'INFO', comentario: 'Fecha de registro no disponible' };
+    const tz = anzGetTz(r['Centro']);
+    const dias = anzCalendarDays(fechaReg, rd, tz);
+    const hrs = dias * 24;
+    const estado = hrs >= 48 ? 'ALERTA' : 'OK';
+    const comentario = hrs >= 48
+      ? `${dias} día(s) = ${hrs} hrs desde registro — ⚠ SUPERA 48 HRS — Validar con Control Operativo y Logística si el material ya fue entregado o no ha sido gestionado.`
+      : `${dias} día(s) = ${hrs} hrs desde registro — dentro de plazo`;
+    return { estado, comentario };
+  },
+  'ENTREGA INMEDIATA': (r, rd) => {
+    const fechaReg = anzParseDate(r['Fecha de Registro']);
+    const tz = anzGetTz(r['Centro']);
+    const dias = fechaReg ? anzCalendarDays(fechaReg, rd, tz) : null;
+    const propia = +r['Cantidad Propia'] || 0;
+    const msgs = [];
+    if (dias !== null) msgs.push(`${dias} día(s) en estatus ENTREGA INMEDIATA`);
+    msgs.push(propia > 0 ? `Cantidad propia disponible: ${anzFmt(propia)}` : 'Sin cantidad propia');
+    return { estado: dias > 1 ? 'ALERTA' : 'INFO', comentario: msgs.join(' | ') };
+  },
+  'PIDE Y RECOGE': () => ({ estado: 'N/A', comentario: 'Sin comentarios' }),
+  'APARTADOS': (r, rd) => {
+    const fechaReg = anzParseDate(r['Fecha de Registro']);
+    if (!fechaReg) return { estado: 'INFO', comentario: 'Fecha de registro no disponible' };
+    const tz = anzGetTz(r['Centro']);
+    const dias = anzCalendarDays(fechaReg, rd, tz);
+    return { estado: dias > 90 ? 'ALERTA' : 'INFO', comentario: `${dias} día(s) apartado${dias > 90 ? ' — ⚠ SUPERA 90 DÍAS' : ''}` };
+  },
+  'ENVIO POR PAQUETERIA': () => ({ estado: 'ALERTA', comentario: 'Enviado por paquetería — ¿por qué no se contabilizó en el sistema?' }),
+  'SOBREPEDIDO': (r) => {
+    const oc = +r['Orden de Compra'] || 0;
+    const vend = +r['Cantidad Vendida'] || 0;
+    const pend = +r['Cantidad Pendiente'] || 0;
+    if (!oc) return { estado: 'ALERTA', comentario: 'Sin orden de compra registrada — sin cobertura' };
+    if (oc >= vend) return { estado: 'OK', comentario: `OC (${anzFmt(oc)}) cubre cantidad vendida (${anzFmt(vend)}) ✓` };
+    if (oc >= pend) return { estado: 'INFO', comentario: `OC (${anzFmt(oc)}) cubre pendiente (${anzFmt(pend)}) — no cubre vendida (${anzFmt(vend)})` };
+    return { estado: 'ALERTA', comentario: `OC (${anzFmt(oc)}) NO cubre vendida (${anzFmt(vend)}) ni pendiente (${anzFmt(pend)})` };
+  },
+  'CONTRA ENTREGA (COD)': () => ({ estado: 'INFO', comentario: 'Validar si el plazo de entrega es correcto para este renglón' }),
+  'CTE RECO EN OTRA SUC': (r) => {
+    const traspaso = +r['Solicitud de Traspaso'] || 0;
+    const pend = +r['Cantidad Pendiente'] || 0;
+    if (!traspaso) return { estado: 'ALERTA', comentario: 'Sin solicitud de traspaso activa' };
+    if (traspaso >= pend) return { estado: 'OK', comentario: `Traspaso (${anzFmt(traspaso)}) ✓ cubre pendiente (${anzFmt(pend)})` };
+    return { estado: 'ALERTA', comentario: `Traspaso (${anzFmt(traspaso)}) ✗ NO cubre pendiente (${anzFmt(pend)})` };
+  },
+  'DIRECTO A OBRA': (r) => {
+    const oc = +r['Orden de Compra'] || 0;
+    const vend = +r['Cantidad Vendida'] || 0;
+    if (!oc) return { estado: 'ALERTA', comentario: 'Sin orden de compra registrada' };
+    if (oc >= vend) return { estado: 'OK', comentario: `OC (${anzFmt(oc)}) cubre cantidad vendida (${anzFmt(vend)}) ✓` };
+    return { estado: 'ALERTA', comentario: `OC (${anzFmt(oc)}) NO cubre cantidad vendida (${anzFmt(vend)})` };
+  },
+  'MERCANCIA RESGUARDO': (r) => {
+    const propia = +r['Cantidad Propia'] || 0;
+    if (propia > 0) return { estado: 'ALERTA', comentario: `Sin seguimiento del resguardo — tiene cantidad propia: ${anzFmt(propia)}` };
+    return { estado: 'INFO', comentario: 'Sin cantidad propia — verificar estatus del resguardo' };
+  }
+};
+
+function anzGetAccion(plazo, row, rd) {
+  const key = anzNorm(plazo);
+  for (const [k, fn] of Object.entries(ANZ_ACCIONES)) {
+    if (anzNorm(k) === key) return fn(row, rd);
+  }
+  return { estado: 'INFO', comentario: plazo ? `Sin regla definida para: ${plazo}` : 'Sin plazo de entrega asignado' };
+}
+
+// ============================================================
+//  PROCESAR DATOS (usa RAW del dashboard)
+// ============================================================
+function anzProcessFromRaw() {
+  if (typeof RAW === 'undefined' || !RAW || RAW.length === 0) {
+    document.getElementById('anz-empty').style.display = 'block';
+    document.getElementById('anz-content').style.display = 'none';
+    document.getElementById('anz-refresh-btn').style.display = 'none';
+    return;
+  }
+  document.getElementById('anz-refresh-btn').style.display = 'inline-flex';
+
+  const rdInput = document.getElementById('anz-report-date');
+  const rdVal = rdInput.value;
+  anzReportDate = rdVal ? new Date(rdVal) : new Date();
+
+  anzAllRows = RAW.map(r => {
+    const acc = anzGetAccion(r['Plazo de Entrega'], r, anzReportDate);
+    return { ...r, _estado: acc.estado, _comentario: acc.comentario };
+  });
+
+  anzCentroGroups = {};
+  anzAllRows.forEach(r => {
+    const c = (r['Centro'] || 'SIN CENTRO').toString().trim();
+    if (!anzCentroGroups[c]) anzCentroGroups[c] = [];
+    anzCentroGroups[c].push(r);
+  });
+
+  anzRenderDashboard();
+}
+
+function anzRefresh() {
+  anzProcessFromRaw();
+}
+
+// ============================================================
+//  RENDERIZAR DASHBOARD DEL ANALIZADOR
+// ============================================================
+function anzRenderDashboard() {
+  document.getElementById('anz-empty').style.display = 'none';
+  document.getElementById('anz-content').style.display = 'block';
+
+  const rdStr = anzReportDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  const fname = (typeof CURRENT_FILENAME !== 'undefined' && CURRENT_FILENAME) ? CURRENT_FILENAME : 'Archivo cargado';
+  document.getElementById('anz-file-bar').innerHTML =
+    `📄 <strong>${fname}</strong> &nbsp;·&nbsp; ${anzAllRows.length.toLocaleString()} renglones procesados &nbsp;·&nbsp; Reporte: ${rdStr}`;
+
+  const total = anzAllRows.length;
+  const alertas = anzAllRows.filter(r => r._estado === 'ALERTA').length;
+  const oks = anzAllRows.filter(r => r._estado === 'OK').length;
+  const infos = anzAllRows.filter(r => r._estado === 'INFO').length;
+  const nas = total - alertas - oks - infos;
+  const centros = Object.keys(anzCentroGroups).length;
+  const orgs = [...new Set(anzAllRows.map(r => r['Organizacion de Ventas']))].filter(Boolean).length;
+  const pctAlerta = total > 0 ? ((alertas / total) * 100).toFixed(1) : '0.0';
+
+  document.getElementById('anz-cards').innerHTML = `
+    <div class="anz-card"><div class="anz-val">${total.toLocaleString()}</div><div class="anz-lbl">Renglones</div></div>
+    <div class="anz-card"><div class="anz-val anz-red">${alertas.toLocaleString()}</div><div class="anz-lbl">🔴 Alertas</div></div>
+    <div class="anz-card"><div class="anz-val anz-green">${oks.toLocaleString()}</div><div class="anz-lbl">🟢 OK</div></div>
+    <div class="anz-card"><div class="anz-val anz-yellow">${infos.toLocaleString()}</div><div class="anz-lbl">🟡 Info</div></div>
+    <div class="anz-card"><div class="anz-val">${nas.toLocaleString()}</div><div class="anz-lbl">⚪ N/A</div></div>
+    <div class="anz-card"><div class="anz-val">${centros}</div><div class="anz-lbl">Centros</div></div>
+    <div class="anz-card"><div class="anz-val">${orgs}</div><div class="anz-lbl">Orgs. Ventas</div></div>
+    <div class="anz-card"><div class="anz-val ${pctAlerta > 50 ? 'anz-red' : pctAlerta > 25 ? 'anz-yellow' : 'anz-green'}">${pctAlerta}%</div><div class="anz-lbl">% Alertas</div></div>
+  `;
+
+  // Barras Plazo
+  const byPlazo = {};
+  anzAllRows.forEach(r => { const k = r['Plazo de Entrega'] || 'Sin plazo'; byPlazo[k] = (byPlazo[k] || 0) + 1; });
+  const maxP = Math.max(...Object.values(byPlazo), 1);
+  document.getElementById('anz-bars-plazo').innerHTML = Object.entries(byPlazo)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `<div class="anz-bar-row">
+      <div class="anz-bar-lbl" title="${k}">${k}</div>
+      <div class="anz-bar-track"><div class="anz-bar-fill" style="width:${(v / maxP * 100).toFixed(1)}%"></div></div>
+      <div class="anz-bar-val">${v.toLocaleString()}</div>
+    </div>`).join('');
+
+  // Barras Estado
+  const estData = [
+    { k: 'ALERTA', v: alertas, cls: 'anz-red' },
+    { k: 'OK', v: oks, cls: 'anz-green' },
+    { k: 'INFO', v: infos, cls: 'anz-yellow' },
+    { k: 'N/A', v: nas, cls: 'anz-gray' }
+  ];
+  const maxE = Math.max(...estData.map(e => e.v), 1);
+  document.getElementById('anz-bars-estado').innerHTML = estData.map(e => `<div class="anz-bar-row">
+    <div class="anz-bar-lbl">${e.k}</div>
+    <div class="anz-bar-track"><div class="anz-bar-fill ${e.cls}" style="width:${e.v ? (e.v / maxE * 100).toFixed(1) : 0}%"></div></div>
+    <div class="anz-bar-val">${e.v.toLocaleString()}</div>
+  </div>`).join('');
+
+  // Tabla de centros
+  const centroData = Object.entries(anzCentroGroups).map(([c, rows]) => {
+    const a = rows.filter(r => r._estado === 'ALERTA').length;
+    const ok = rows.filter(r => r._estado === 'OK').length;
+    const inf = rows.filter(r => r._estado === 'INFO').length;
+    const na = rows.length - a - ok - inf;
+    const pct = ((a / rows.length) * 100).toFixed(1);
+    const orgsC = [...new Set(rows.map(r => r['Organizacion de Ventas']))].filter(Boolean).join(', ');
+    return { c, rows, a, ok, inf, na, pct, orgsC };
+  }).sort((x, y) => y.a - x.a);
+
+  document.getElementById('anz-centros-tbody').innerHTML = centroData.map(d => `
+    <tr class="anz-clickable" onclick="anzOpenDetail('${d.c.replace(/'/g, "\\'")}')">
+      <td style="font-weight:700;color:var(--accent3);font-size:13px;">${d.c}</td>
+      <td>${d.orgsC}</td>
+      <td style="text-align:right;font-weight:700;">${d.rows.length.toLocaleString()}</td>
+      <td style="text-align:right;"><span class="anz-badge anz-b-alerta">${d.a}</span></td>
+      <td style="text-align:right;"><span class="anz-badge anz-b-ok">${d.ok}</span></td>
+      <td style="text-align:right;"><span class="anz-badge anz-b-info">${d.inf}</span></td>
+      <td style="text-align:right;"><span class="anz-badge anz-b-na">${d.na}</span></td>
+      <td style="text-align:right;" class="${+d.pct > 50 ? 'anz-pct-hi' : +d.pct > 25 ? 'anz-pct-md' : 'anz-pct-lo'}">${d.pct}%</td>
+    </tr>`).join('');
+}
+
+function anzOpenDetail(centro) {
+  anzCurrCentro = centro;
+  anzCurrFilter = 'ALL';
+  anzCurrPage = 0;
+  document.querySelectorAll('#anz-centros-tbody tr').forEach(r => {
+    r.classList.toggle('anz-active-row', r.cells[0].textContent.trim() === centro);
+  });
+  document.querySelectorAll('.anz-f-btn').forEach(b => b.classList.toggle('anz-on', b.dataset.f === 'ALL'));
+  const panel = document.getElementById('anz-detail-panel');
+  panel.style.display = 'block';
+  const rows = anzCentroGroups[centro] || [];
+  const a = rows.filter(r => r._estado === 'ALERTA').length;
+  const orgsC = [...new Set(rows.map(r => r['Organizacion de Ventas']))].filter(Boolean).join(' · ');
+  document.getElementById('anz-dp-title').textContent = `Centro: ${centro}`;
+  document.getElementById('anz-dp-meta').textContent = `${orgsC} · ${rows.length.toLocaleString()} renglones · ${a} alertas`;
+  anzRenderDetail();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function anzCloseDetail() {
+  document.getElementById('anz-detail-panel').style.display = 'none';
+  document.querySelectorAll('#anz-centros-tbody tr').forEach(r => r.classList.remove('anz-active-row'));
+}
+
+function anzApplyFilter(f, btn) {
+  anzCurrFilter = f;
+  anzCurrPage = 0;
+  document.querySelectorAll('.anz-f-btn').forEach(b => b.classList.remove('anz-on'));
+  btn.classList.add('anz-on');
+  anzRenderDetail();
+}
+
+function anzRenderDetail() {
+  const rows = anzCentroGroups[anzCurrCentro] || [];
+  const filtered = anzCurrFilter === 'ALL' ? rows : rows.filter(r => r._estado === anzCurrFilter);
+  const total = filtered.length;
+  document.getElementById('anz-dp-meta').textContent =
+    `${[...new Set(rows.map(r => r['Organizacion de Ventas']))].filter(Boolean).join(' · ')} · ${total.toLocaleString()} renglones${anzCurrFilter !== 'ALL' ? ' (filtrado)' : ''}`;
+
+  const start = anzCurrPage * ANZ_PAGE_SZ;
+  const page = filtered.slice(start, start + ANZ_PAGE_SZ);
+
+  const badgeMap = { ALERTA: 'anz-b-alerta', OK: 'anz-b-ok', INFO: 'anz-b-info', 'N/A': 'anz-b-na' };
+
+  document.getElementById('anz-dp-tbody').innerHTML = page.map((r, i) => {
+    const bc = badgeMap[r._estado] || 'anz-b-na';
+    return `<tr>
+      <td style="color:var(--text3);font-size:11px;">${start + i + 1}</td>
+      <td>${r['Organizacion de Ventas'] || ''}</td>
+      <td style="font-weight:700;">${r['Numero de Pedido'] || ''}</td>
+      <td>${r['Numero de Renglon'] || ''}</td>
+      <td style="font-family:monospace;font-size:11px;">${r['Codigo de Material'] || r['Codigo'] || r['Material'] || ''}</td>
+      <td style="max-width:190px;white-space:normal;font-size:11px;line-height:1.3;">${r['Descripcion del Material'] || ''}</td>
+      <td style="white-space:nowrap;font-size:11px;">${r['Plazo de Entrega'] || ''}</td>
+      <td style="white-space:nowrap;font-size:11px;">${anzFmtDate(r['Fecha de Registro'], r['Centro'])}</td>
+      <td style="text-align:right;font-weight:700;">${anzFmt(r['Cantidad Pendiente'])}</td>
+      <td style="text-align:right;">${anzFmt(r['Cantidad Propia'])}</td>
+      <td style="text-align:right;">${anzFmt(r['Solicitud de Traspaso'])}</td>
+      <td style="text-align:right;">${anzFmt(r['Orden de Compra'])}</td>
+      <td><span class="anz-badge ${bc}">${r._estado}</span></td>
+      <td style="max-width:260px;white-space:normal;font-size:11px;color:var(--text);line-height:1.4;">${r._comentario}</td>
+    </tr>`;
+  }).join('');
+
+  const totalPages = Math.ceil(total / ANZ_PAGE_SZ);
+  if (totalPages > 1) {
+    let pags = `<button class="anz-p-btn" onclick="anzGoPage(${anzCurrPage - 1})" ${anzCurrPage === 0 ? 'disabled' : ''}>‹ Ant.</button>`;
+    const lo = Math.max(0, anzCurrPage - 3), hi = Math.min(totalPages, anzCurrPage + 4);
+    if (lo > 0) pags += `<button class="anz-p-btn" onclick="anzGoPage(0)">1</button><span style="font-size:11px;color:var(--text3);">…</span>`;
+    for (let i = lo; i < hi; i++) pags += `<button class="anz-p-btn ${i === anzCurrPage ? 'anz-on' : ''}" onclick="anzGoPage(${i})">${i + 1}</button>`;
+    if (hi < totalPages) pags += `<span style="font-size:11px;color:var(--text3);">…</span><button class="anz-p-btn" onclick="anzGoPage(${totalPages - 1})">${totalPages}</button>`;
+    pags += `<button class="anz-p-btn" onclick="anzGoPage(${anzCurrPage + 1})" ${anzCurrPage === totalPages - 1 ? 'disabled' : ''}>Sig. ›</button>`;
+    pags += `<span class="anz-pag-info">${total.toLocaleString()} renglones · Pág. ${anzCurrPage + 1} de ${totalPages}</span>`;
+    document.getElementById('anz-dp-pag').innerHTML = pags;
+  } else {
+    document.getElementById('anz-dp-pag').innerHTML = `<span class="anz-pag-info">${total.toLocaleString()} renglones</span>`;
+  }
+}
+
+function anzGoPage(p) {
+  const rows = anzCentroGroups[anzCurrCentro] || [];
+  const filtered = anzCurrFilter === 'ALL' ? rows : rows.filter(r => r._estado === anzCurrFilter);
+  const totalPages = Math.ceil(filtered.length / ANZ_PAGE_SZ);
+  if (p < 0 || p >= totalPages) return;
+  anzCurrPage = p;
+  anzRenderDetail();
+  document.getElementById('anz-detail-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================
+//  EXPORTAR ZIP — 1 archivo por organización, 1 hoja por Centro + Resumen
+// ============================================================
+const ANZ_FILLS = { ALERTA: 'FFCCCC', OK: 'C6EFCE', INFO: 'FFEB9C', 'N/A': 'F2F2F2' };
+const ANZ_FONTS = { ALERTA: '9C0006', OK: '276221', INFO: '9C6500', 'N/A': '595959' };
+const ANZ_H_FILL = '1F3864', ANZ_H_FONT = 'FFFFFF';
+
+const ANZ_COLS_EXPORT = [
+  { k: 'Organizacion de Ventas', w: 14 },
+  { k: 'Centro', w: 8 },
+  { k: 'Numero de Pedido', w: 13 },
+  { k: 'Numero de Renglon', w: 8 },
+  { k: 'Codigo de Material', w: 15 },
+  { k: 'Descripcion del Material', w: 36 },
+  { k: 'Plazo de Entrega', w: 22 },
+  { k: 'Fecha de Registro', w: 13 },
+  { k: 'Cantidad Vendida', w: 11 },
+  { k: 'Cantidad Pendiente', w: 11 },
+  { k: 'Cantidad Propia', w: 11 },
+  { k: 'Solicitud de Traspaso', w: 14 },
+  { k: 'Orden de Compra', w: 13 },
+  { k: 'Existencia en Transito', w: 14 },
+  { k: 'Estado', w: 9 },
+  { k: 'Comentario / Acción', w: 55 }
+];
+
+function anzMkStyle(fill, font, bold) {
+  return {
+    fill: { fgColor: { rgb: fill } },
+    font: { name: 'Calibri', sz: 10, bold: !!bold, color: { rgb: font || '000000' } },
+    alignment: { wrapText: true, vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: 'D0D0D0' } },
+      bottom: { style: 'thin', color: { rgb: 'D0D0D0' } },
+      left: { style: 'thin', color: { rgb: 'D0D0D0' } },
+      right: { style: 'thin', color: { rgb: 'D0D0D0' } }
+    }
+  };
+}
+function anzNumCell(v, fill, font) {
+  return { v: isNaN(v) || v === '' ? 0 : +v, t: 'n', s: anzMkStyle(fill, font, false) };
+}
+function anzStrCell(v, fill, font) {
+  return { v: String(v || ''), t: 's', s: anzMkStyle(fill, font, false) };
+}
+
+const ANZ_ORG_GROUPS = [
+  { prefix: 'KS', org: 'KSC', label: 'KSC' },
+  { prefix: 'KN', org: 'KNO', label: 'KNO' },
+  { prefix: 'KC', org: 'KSA', label: 'KSA' },
+  { prefix: 'KB', org: 'KBO', label: 'KBO' },
+  { prefix: 'KO', org: 'KON', label: 'KON' }
+];
+
+function anzGetCentroGroup(centro) {
+  const c = (centro || '').toString().toUpperCase();
+  for (const g of ANZ_ORG_GROUPS) if (c.startsWith(g.prefix)) return g;
+  return { prefix: 'XX', org: 'OTROS', label: 'OTROS' };
+}
+
+function anzBuildWorkbook(centrosEnGrupo) {
+  const wb = XLSX.utils.book_new();
+  const sortedCentros = centrosEnGrupo.slice().sort();
+
+  sortedCentros.forEach(centro => {
+    const rows = anzCentroGroups[centro];
+    const hdr = ANZ_COLS_EXPORT.map(c => ({ v: c.k, t: 's', s: anzMkStyle(ANZ_H_FILL, ANZ_H_FONT, true) }));
+    const sheetData = [hdr];
+
+    rows.forEach(r => {
+      const est = r._estado || 'INFO';
+      const fill = ANZ_FILLS[est] || 'FFFFFF';
+      const font = ANZ_FONTS[est] || '000000';
+      sheetData.push([
+        anzStrCell(r['Organizacion de Ventas'], fill, font),
+        anzStrCell(r['Centro'], fill, font),
+        anzNumCell(r['Numero de Pedido'], fill, font),
+        anzNumCell(r['Numero de Renglon'], fill, font),
+        anzStrCell(r['Codigo de Material'] || r['Codigo'] || r['Material'], fill, font),
+        anzStrCell(r['Descripcion del Material'], fill, font),
+        anzStrCell(r['Plazo de Entrega'], fill, font),
+        anzStrCell(anzFmtDate(r['Fecha de Registro'], r['Centro']), fill, font),
+        anzNumCell(r['Cantidad Vendida'], fill, font),
+        anzNumCell(r['Cantidad Pendiente'], fill, font),
+        anzNumCell(r['Cantidad Propia'], fill, font),
+        anzNumCell(r['Solicitud de Traspaso'], fill, font),
+        anzNumCell(r['Orden de Compra'], fill, font),
+        anzNumCell(r['Existencia en Transito'], fill, font),
+        anzStrCell(est, fill, font),
+        anzStrCell(r._comentario, fill, font)
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = ANZ_COLS_EXPORT.map(c => ({ wch: c.w }));
+    const sheetName = centro.toString().replace(/[:\\\/\?\*\[\]']/g, '').substring(0, 31) || 'CENTRO';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  // Hoja RESUMEN
+  const resHdr = ['Centro', 'Org. Ventas', 'Total', 'ALERTA', 'OK', 'INFO', 'N/A', '% Alerta'].map(
+    v => ({ v, t: 's', s: anzMkStyle(ANZ_H_FILL, ANZ_H_FONT, true) })
+  );
+  const resData = [resHdr];
+
+  sortedCentros.forEach(c => {
+    const rows = anzCentroGroups[c];
+    const a = rows.filter(r => r._estado === 'ALERTA').length;
+    const ok = rows.filter(r => r._estado === 'OK').length;
+    const inf = rows.filter(r => r._estado === 'INFO').length;
+    const na = rows.length - a - ok - inf;
+    const pct = ((a / rows.length) * 100).toFixed(1) + '%';
+    const orgsC = [...new Set(rows.map(r => r['Organizacion de Ventas']))].filter(Boolean).join(', ');
+    const fill = a / rows.length > 0.5 ? ANZ_FILLS.ALERTA : a / rows.length > 0.25 ? ANZ_FILLS.INFO : 'FFFFFF';
+    const s0 = anzMkStyle(fill, '000000', false);
+    resData.push([
+      { v: c, t: 's', s: s0 },
+      { v: orgsC, t: 's', s: s0 },
+      { v: rows.length, t: 'n', s: s0 },
+      { v: a, t: 'n', s: { ...s0, fill: { fgColor: { rgb: ANZ_FILLS.ALERTA } }, font: { ...s0.font, color: { rgb: ANZ_FONTS.ALERTA } } } },
+      { v: ok, t: 'n', s: { ...s0, fill: { fgColor: { rgb: ANZ_FILLS.OK } }, font: { ...s0.font, color: { rgb: ANZ_FONTS.OK } } } },
+      { v: inf, t: 'n', s: { ...s0, fill: { fgColor: { rgb: ANZ_FILLS.INFO } }, font: { ...s0.font, color: { rgb: ANZ_FONTS.INFO } } } },
+      { v: na, t: 'n', s: { ...s0, fill: { fgColor: { rgb: ANZ_FILLS['N/A'] } }, font: { ...s0.font, color: { rgb: ANZ_FONTS['N/A'] } } } },
+      { v: pct, t: 's', s: s0 }
+    ]);
+  });
+
+  const wsRes = XLSX.utils.aoa_to_sheet(resData);
+  wsRes['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, wsRes, 'RESUMEN');
+
+  return wb;
+}
+
+async function anzExportZip() {
+  if (anzAllRows.length === 0) { showToast('⚠️ Sin datos para exportar'); return; }
+  const btn = document.getElementById('anz-btn-export');
+  btn.disabled = true;
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '⏳ Generando ZIP...';
+
+  await new Promise(r => setTimeout(r, 50));
+
+  try {
+    const zip = new JSZip();
+    const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+    const grupos = {};
+    Object.keys(anzCentroGroups).forEach(centro => {
+      const g = anzGetCentroGroup(centro);
+      if (!grupos[g.label]) grupos[g.label] = [];
+      grupos[g.label].push(centro);
+    });
+
+    for (const [label, centros] of Object.entries(grupos)) {
+      btn.innerHTML = `⏳ Generando ${label}...`;
+      await new Promise(r => setTimeout(r, 10));
+      const wb = anzBuildWorkbook(centros);
+      const binStr = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+      const buf = new ArrayBuffer(binStr.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < binStr.length; i++) view[i] = binStr.charCodeAt(i) & 0xFF;
+      zip.file(`Picking_${label}_${ts}.xlsx`, buf);
+    }
+
+    btn.innerHTML = '⏳ Comprimiendo...';
+    await new Promise(r => setTimeout(r, 10));
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Picking_GK_${ts}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('✅ ZIP descargado');
+
+  } catch (err) {
+    showToast('Error al generar ZIP: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = oldText;
+}
+
+// ============================================================
+//  HOOK: cuando se carga un archivo en el dashboard, alimentar el analizador
+//  Se logra envolviendo handleFile original
+// ============================================================
+(function() {
+  if (typeof handleFile !== 'function') return;
+  const _origHandleFile = handleFile;
+  window.handleFile = function(file) {
+    _origHandleFile(file);
+    // Reintentar la sincronización hasta que RAW esté listo (handleFile usa FileReader async)
+    let attempts = 0;
+    const trySync = () => {
+      attempts++;
+      if (typeof RAW !== 'undefined' && RAW && RAW.length > 0) {
+        anzProcessFromRaw();
+      } else if (attempts < 50) {
+        setTimeout(trySync, 100);
+      }
+    };
+    setTimeout(trySync, 200);
+  };
+})();
+
 // ===== INIT: cargar historial al abrir =====
 window.addEventListener('DOMContentLoaded', () => {
   // Mostrar tabs-nav solo si ya hay cargas guardadas
@@ -4179,15 +4533,12 @@ window.addEventListener('DOMContentLoaded', () => {
     renderHistorial();
     populateCompSelects();
   }
+  // Asegurar que la pestaña Analizador es la activa al inicio si no hay datos
+  // (handleFile cambia a 'dashboard-tab' después de cargar)
+  if (typeof RAW === 'undefined' || !RAW || RAW.length === 0) {
+    // Mantener estado vacío del analizador
+  }
 });
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
