@@ -376,7 +376,16 @@
       <div class="subtitle">Análisis operativo y comercial · VA05 "Creado por: Francisco Javier Cerezo Ramos"</div>
     </div>
   </div>
-  <div class="badge-date" id="badge-date">Sin datos cargados</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="badge-date" id="badge-date">Sin datos cargados</div>
+    <label title="Logo para informes Word — acepta imagen local o URL" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <span style="font-size:11px;color:var(--text2);white-space:nowrap;">🖼 Logo:</span>
+      <input type="file" id="logo-file-input" accept="image/*" style="font-size:11px;max-width:180px;" onchange="onLogoFileChange(this)">
+    </label>
+    <input type="text" id="logo-url-input" placeholder="o pega URL / base64" title="URL o base64 del logo"
+      style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);width:180px;"
+      oninput="onLogoUrlChange(this)">
+  </div>
 </div>
 
 <!-- UPLOAD -->
@@ -528,6 +537,7 @@
   <div class="download-bar" id="download-bar">
     <span>📤 Exportar:</span>
     <button class="btn-download" onclick="downloadReport()">📄 Descargar Informe Ejecutivo Word (.docx)</button>
+    <button class="btn-download" style="background:var(--accent3);" onclick="descargarInformesZipPorSucursal()">📊 Informes Word por Sucursal (ZIP)</button>
     <span style="color:var(--text3);font-size:11px">El informe incluye gráficas y datos según los filtros activos · Compatible con Outlook</span>
   </div>
 
@@ -741,7 +751,12 @@
       <!-- KPIs comparativos -->
       <div class="section-header">
         <div class="section-title">Indicadores Globales — Diferencias</div>
-        <button class="btn-copy" onclick="exportarInformeComparacionCompleto()" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:5px 14px;">📄 Exportar Informe Word Completo</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-copy" onclick="exportarInformeComparacionCompleto()" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:5px 14px;">📄 Word Completo</button>
+          <button class="btn-copy" id="btn-zip-html-centros" onclick="descargarPDFsPorCentroZip()" style="background:#1F3864;color:#fff;border-color:#1F3864;padding:5px 14px;">🌐 HTML por Centro (ZIP)</button>
+          <button class="btn-copy" id="btn-zip-pdf-centros" onclick="descargarPDFRealPorCentroZip()" style="background:#C0392B;color:#fff;border-color:#C0392B;padding:5px 14px;">📄 PDF por Centro (ZIP)</button>
+          <button class="btn-copy" id="btn-zip-png-centros" onclick="descargarPNGPorCentroZip()" style="background:#1E8449;color:#fff;border-color:#1E8449;padding:5px 14px;">🖼 PNG por Centro (ZIP)</button>
+        </div>
       </div>
       <div class="comp-kpi-grid" id="comp-kpi-grid"></div>
 
@@ -1397,11 +1412,11 @@ function buildWordReport(secs = {}) {
       <table cellpadding="0" cellspacing="0">
         <tr>
           <td style="background:#C55A11;width:50px;height:50px;text-align:center;vertical-align:middle;border-radius:8px;">
-            <span style="font-size:20pt;font-weight:bold;color:#fff;">GK</span>
+            ${LOGO_BASE64 ? `<img src="${LOGO_BASE64}" style="height:44px;max-width:44px;object-fit:contain;" alt="Logo">` : `<span style="font-size:20pt;font-weight:bold;color:#fff;">GK</span>`}
           </td>
           <td style="padding-left:16px;">
-            <div style="font-size:20pt;font-weight:bold;color:#fff;">Informe Ejecutivo — Picking Pendiente</div>
-            <div style="font-size:10pt;color:#BDC3C7;margin-top:2px;">Análisis operativo y comercial · ZVA05VTAS/KUMO ENTREGAS · Francisco Javier Cerezo Ramos</div>
+            <div style="font-size:20pt;font-weight:bold;color:#fff;">Reporte de Pickings Pendientes — Informe Ejecutivo</div>
+            <div style="font-size:10pt;color:#BDC3C7;margin-top:2px;">Análisis operativo · ZVA05VTAS / KUMO ENTREGAS · Francisco Javier Cerezo Ramos</div>
           </td>
         </tr>
       </table>
@@ -1419,19 +1434,19 @@ function buildWordReport(secs = {}) {
 <div style="padding:20px 0;">
 
 ${inc.kpis ? `<!-- INDICADORES GLOBALES -->
-<h2>&#9632; Indicadores Globales</h2>
+<h2>&#9632; Indicadores Comparativos del Centro</h2>
 <table width="100%" cellpadding="0" cellspacing="4" style="border-collapse:separate;border-spacing:4px;">
   ${kpiTableRows}
 </table>` : ''}
 
 ${inc.org ? `<!-- ORG VENTAS -->
-<h2>&#9632; Por Organización de Ventas</h2>
+<h2>&#9632; Resumen por Organización de Ventas</h2>
 <table width="100%" cellpadding="0" cellspacing="0">
   <tr>${orgColsHtml}</tr>
 </table>` : ''}
 
 ${inc.graficasCentro ? `<!-- GRÁFICAS: PEDIDOS Y COSTO POR CENTRO -->
-<h2>&#9632; Picking Pendiente por Centro</h2>
+<h2>&#9632; Picking Pendiente por Centro — Pedidos Únicos (Top 20)</h2>
 <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
   <tr>
     <td width="50%" style="vertical-align:top;padding:12px;">
@@ -1461,7 +1476,7 @@ ${inc.graficasPlazo ? `<!-- GRÁFICAS: PLAZO POR TIPO DE TRANSACCIÓN -->
 </table>` : ''}
 
 ${inc.graficasCosto ? `<!-- GRÁFICAS: COSTO POR TRANSACCIÓN Y DISTRIBUCIÓN -->
-<h2>&#9632; Costo de Venta por Tipo de Transacción</h2>
+<h2>&#9632; Costo de Venta Pendiente por Tipo de Transacción</h2>
 <table width="100%" cellpadding="8" cellspacing="0" style="border:1px solid #E0E0E0;">
   <tr>
     <td width="60%" style="vertical-align:top;padding:12px;">
@@ -1469,7 +1484,7 @@ ${inc.graficasCosto ? `<!-- GRÁFICAS: COSTO POR TRANSACCIÓN Y DISTRIBUCIÓN --
       ${chartImages['chartCostoTx'] ? `<img src="${chartImages['chartCostoTx']}" width="100%" alt="Costo por transaccion">` : '<p style="color:#aaa">Gráfica no disponible</p>'}
     </td>
     <td width="40%" style="vertical-align:top;padding:12px;border-left:1px solid #E0E0E0;">
-      <h3>Distribución por tipo de transacción</h3>
+      <h3>Distribución renglones por tipo de transacción</h3>
       ${chartImages['chartDonut'] ? `<img src="${chartImages['chartDonut']}" width="100%" alt="Distribución transacción">` : ''}
       <h3 style="margin-top:12px;">Pedidos por organización de ventas</h3>
       ${chartImages['chartOrgBar'] ? `<img src="${chartImages['chartOrgBar']}" width="100%" alt="Pedidos por org">` : ''}
@@ -3083,7 +3098,792 @@ function renderCompSucursalTable(cA, cB, centrosA, centrosB) {
   document.getElementById('comp-sucursal-table').innerHTML = html;
 }
 
-// ===== EXPORTAR INFORME COMPARACIÓN COMPLETO (WORD) =====
+// ===== PDF POR CENTRO — ZIP =====
+async function descargarPDFsPorCentroZip() {
+  const cs = window._lastCompState;
+  if (!cs) { showToast('⚠️ Ejecuta primero la comparación'); return; }
+
+  const btn = document.getElementById('btn-zip-html-centros');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+  await new Promise(r => setTimeout(r, 60));
+
+  try {
+    const { cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro } = cs;
+    const zip = new JSZip();
+    const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+
+    const fechaA = new Date(cA.ts).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }).replace(/\s/g,'/');
+    const fechaB = new Date(cB.ts).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }).replace(/\s/g,'/');
+    const filtroLabel = [centroFiltro&&`Centro: ${centroFiltro}`, orgFiltro&&`Org: ${orgFiltro}`, txFiltro&&`Tx: ${txFiltro}`].filter(Boolean).join(' · ') || 'Todos los centros';
+
+    // Tabla 1 — Indicadores Globales (siempre 1 sola para el filtro activo)
+    const sumC = (centros, f) => Object.values(centros).reduce((s,d) => s+(d[f]||0), 0);
+    const isFilt = Object.keys(centrosA).length !== Object.keys(cA.centroData||{}).length
+                || Object.keys(centrosB).length !== Object.keys(cB.centroData||{}).length;
+    const kpis = [
+      { l:'PEDIDOS PENDIENTES DE PICKING', a: isFilt?sumC(centrosA,'pedidos'):(cA.totalPedidos||sumC(centrosA,'pedidos')), b: isFilt?sumC(centrosB,'pedidos'):(cB.totalPedidos||sumC(centrosB,'pedidos')), fa:fmt },
+      { l:'SKU\'S PENDIENTES',             a: isFilt?sumC(centrosA,'renglones'):(cA.totalRenglones||sumC(centrosA,'renglones')), b: isFilt?sumC(centrosB,'renglones'):(cB.totalRenglones||sumC(centrosB,'renglones')), fa:fmt },
+      { l:'ZVA05VTAS',                     a: isFilt?sumC(centrosA,'vtas'):(cA.vtas||sumC(centrosA,'vtas')), b: isFilt?sumC(centrosB,'vtas'):(cB.vtas||sumC(centrosB,'vtas')), fa:fmt },
+      { l:'KUMO ENTREGAS/VL06O',           a: isFilt?sumC(centrosA,'kumo'):(cA.kumo||sumC(centrosA,'kumo')), b: isFilt?sumC(centrosB,'kumo'):(cB.kumo||sumC(centrosB,'kumo')), fa:fmt },
+      { l:'COSTO PENDIENTE',               a: isFilt?sumC(centrosA,'costo'):(cA.totalCosto||sumC(centrosA,'costo')), b: isFilt?sumC(centrosB,'costo'):(cB.totalCosto||sumC(centrosB,'costo')), fa:fmtM },
+    ];
+
+    // Tabla 3 (plazo) — Centro | Ped.A | Ped.B | Δ Pedidos — datos por centro
+    const PRIO = ['ENTREGA INMEDIATA','ENVÍO A DOMICILIO'];
+    const allCentrosRaw = [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])];
+
+    // Tabla 4 (diagnóstico) — construir misma lógica que renderCompSucursalTable
+    const totalItems = allCentrosRaw.length;
+    const centroItems = allCentrosRaw.map(c => {
+      const dA = centrosA[c]||{}, dB = centrosB[c]||{};
+      const pedA=dA.pedidos||0, pedB=dB.pedidos||0;
+      const cosA=dA.costo||0,   cosB=dB.costo||0;
+      const pedDiff = pedA>0?((pedB-pedA)/pedA*100):(pedB>0?100:0);
+      const cosDiff = cosA>0?((cosB-cosA)/cosA*100):null;
+      const inmA=dA.plazos?.['ENTREGA INMEDIATA']||0, inmB=dB.plazos?.['ENTREGA INMEDIATA']||0;
+      const domA=dA.plazos?.['ENVÍO A DOMICILIO']||0, domB=dB.plazos?.['ENVÍO A DOMICILIO']||0;
+      return {c,dA,dB,pedA,pedB,cosA,cosB,pedDiff,cosDiff,inmA,inmB,domA,domB};
+    }).sort((a,b)=>a.pedDiff-b.pedDiff);
+
+    // Tabla 5 — renglones cerrados/nuevos por centro
+    const renByCentro = window._renglonByCentro || {};
+    let listA = cA.pedidoCodigoList||[], listB = cB.pedidoCodigoList||[];
+    if (centroFiltro) { listA=listA.filter(x=>x.cen===centroFiltro); listB=listB.filter(x=>x.cen===centroFiltro); }
+    if (orgFiltro) {
+      const odA=cA.orgData||{}, odB=cB.orgData||{};
+      listA=listA.filter(x=>odA[x.cen]===orgFiltro);
+      listB=listB.filter(x=>odB[x.cen]===orgFiltro);
+    }
+    const keyFn = x=>x.ped+'||'+x.cod+'||'+x.cen;
+    const setA=new Set(listA.map(keyFn)), setB=new Set(listB.map(keyFn));
+    const totalA=listA.length, totalB=listB.length;
+    const cerradosTotal=listA.filter(x=>!setB.has(keyFn(x))).length;
+    const nuevosTotal  =listB.filter(x=>!setA.has(keyFn(x))).length;
+    const permanecenTotal=listA.filter(x=>setB.has(keyFn(x))).length;
+    const pctAvGlobal = totalA>0?((cerradosTotal/totalA)*100).toFixed(1):'0.0';
+    const pctNuGlobal = totalB>0?((nuevosTotal/totalB)*100).toFixed(1):'0.0';
+
+    // Centros distintos que participan (para generar un doc por cada uno O uno global si no hay lista)
+    // Si hay filtro de centro → un solo PDF. Si no → un PDF por centro presente en centrosB
+    const centrosParaDoc = centroFiltro
+      ? [centroFiltro]
+      : [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])].sort();
+
+    const H='#1F3864', O='#C55A11';
+    const logoTag = getLogoTag ? getLogoTag(36) : `<span style="background:#C55A11;border-radius:4px;padding:2px 8px;font-weight:900;color:#fff;font-size:16pt;">GK</span><span style="font-weight:900;color:#1F3864;font-size:18pt;margin-left:5px;">Kuroda</span>`;
+
+    // Helper: color Δ (menos pedidos = verde para pendientes)
+    function dc(a,b){ const d=b-a; return d<0?'#1E8449':d>0?'#C0392B':'#555'; }
+    function dp(a,b){ return a>0?((b-a)/a*100).toFixed(1)+'%':'—'; }
+    function dabs(a,b){ const d=b-a; return (d>=0?'+':'')+fmt(d); }
+
+    for (const centro of centrosParaDoc) {
+      if (btn) btn.textContent = `⏳ ${centro}...`;
+      await new Promise(r=>setTimeout(r,5));
+
+      const dA = centrosA[centro]||{}, dB = centrosB[centro]||{};
+      const ren = renByCentro[centro]||null;
+
+      // Diagnóstico para este centro
+      const tercio = Math.floor(totalItems/3)||1;
+      const idx = centroItems.findIndex(x=>x.c===centro);
+      const item = centroItems[idx] || null;
+      let diagTexts = [];
+      if (item) {
+        const ps = item.pedDiff.toFixed(1);
+        if(parseFloat(ps)<=-20) diagTexts.push(`✅ Reducción significativa de pedidos (${ps}%)`);
+        else if(parseFloat(ps)>=20) diagTexts.push(`🔴 Aumento crítico de pedidos (+${ps}%)`);
+        else if(parseFloat(ps)<0)   diagTexts.push(`📉 Leve mejora de pedidos (${ps}%)`);
+        else if(parseFloat(ps)>0)   diagTexts.push(`⚠️ Incremento de pedidos (+${ps}%)`);
+        else diagTexts.push(`= Sin cambio en pedidos`);
+        if(ren){
+          const av=ren.pctAvance.toFixed(1), nu=ren.pctNuevos.toFixed(1);
+          if(ren.pctAvance>=60) diagTexts.push(`📦 Alto avance de renglones: ${av}% cerrados (${fmt(ren.cerrados)} reng.)`);
+          else if(ren.pctAvance>=30) diagTexts.push(`📦 Avance medio: ${av}% cerrados (${fmt(ren.cerrados)} reng.)`);
+          else if(ren.cerrados>0) diagTexts.push(`📦 Bajo avance: ${av}% cerrados (${fmt(ren.cerrados)} reng.)`);
+          if(ren.nuevos>0) diagTexts.push(`🆕 ${fmt(ren.nuevos)} renglones nuevos (${nu}%)`);
+          if(ren.balance>0) diagTexts.push(`✔ Balance neto positivo: +${fmt(ren.balance)} reng.`);
+          else if(ren.balance<0) diagTexts.push(`✖ Balance neto negativo: ${fmt(ren.balance)} reng.`);
+        }
+        if(item.inmB>item.inmA) diagTexts.push(`⚡ Más inmediatas (+${fmt(item.inmB-item.inmA)})`);
+        else if(item.inmB<item.inmA) diagTexts.push(`⚡ Menos inmediatas (${fmt(item.inmA-item.inmB)} resueltas)`);
+        if(item.cosDiff!==null&&item.cosDiff<=-15) diagTexts.push(`💰 Costo mejoró (${item.cosDiff.toFixed(1)}%)`);
+        if(diagTexts.length===0) diagTexts.push('— Sin cambios relevantes');
+      } else { diagTexts.push('— Sin datos de comparación para este centro'); }
+
+      // Plazos de este centro
+      const allP = [...new Set([...Object.keys(dA.plazos||{}),...Object.keys(dB.plazos||{})])];
+      const prioP = PRIO.filter(p=>allP.includes(p));
+      const restP = allP.filter(p=>!PRIO.includes(p)).sort();
+      const plazosC = [...prioP,...restP];
+
+      // Renglones de este centro — calcular directamente
+      const lAc = (cA.pedidoCodigoList||[]).filter(x=>x.cen===centro);
+      const lBc = (cB.pedidoCodigoList||[]).filter(x=>x.cen===centro);
+      const totAc = lAc.length, totBc = lBc.length;
+      const kFc = x => x.ped+'||'+x.cod;
+      const sAc = new Set(lAc.map(kFc)), sBc = new Set(lBc.map(kFc));
+      const cerradosC  = lAc.filter(x => !sBc.has(kFc(x))).length;
+      const nuevosC    = lBc.filter(x => !sAc.has(kFc(x))).length;
+      const permanecenC = lAc.filter(x =>  sBc.has(kFc(x))).length;
+      const pctAvC = totAc>0 ? (cerradosC/totAc*100) : 0;
+      const pctNuC = totBc>0 ? (nuevosC/totBc*100)   : 0;
+      const renC = { cerrados:cerradosC, nuevos:nuevosC, pctAvance:pctAvC, pctNuevos:pctNuC };
+
+      // ── Generar HTML print-to-PDF (landscape carta, márgenes estrechos) ──
+      const pedA2=dA.pedidos||0, pedB2=dB.pedidos||0, diff2=pedB2-pedA2;
+      const col2=diff2<0?'#1E8449':diff2>0?'#C0392B':'#555';
+
+      const htmlPDF = `<!DOCTYPE html><html lang="es">
+<head><meta charset="UTF-8">
+<title>Picking ${centro} — ${fechaB}</title>
+<style>
+  @page {
+    size: letter landscape;
+    margin: 0.5cm 0.6cm 0.5cm 0.6cm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Calibri, sans-serif;
+    font-size: 8.5pt;
+    color: #1a1a1a;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  h2 {
+    font-size: 9pt;
+    color: ${H};
+    font-weight: 800;
+    margin: 9px 0 4px;
+    padding-bottom: 2px;
+    border-bottom: 2px solid ${O};
+    letter-spacing: 0.2px;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th {
+    background: ${H} !important;
+    color: #fff;
+    padding: 4px 7px;
+    font-size: 7.5pt;
+    border: 1px solid #93a8c2;
+    text-align: center;
+    font-weight: 700;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  td {
+    padding: 4px 7px;
+    font-size: 7.5pt;
+    border: 1px solid #BDC3C7;
+    vertical-align: middle;
+  }
+  .tl { text-align: left; }
+  .tc { text-align: center; }
+  .bg1 { background: #EBF5FB !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .verde { background: #1E8449 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .ambar { background: #B8860B !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  p { margin: 3px 0; font-size: 8pt; }
+  .pie { background: ${H} !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+</style>
+</head>
+<body>
+
+<!-- CABECERA -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:0;border-collapse:collapse;">
+<tr>
+  <td style="padding:5px 8px;vertical-align:middle;width:150px;">${logoTag}</td>
+  <td style="padding:5px 8px;text-align:center;vertical-align:middle;">
+    <div style="font-size:12pt;font-weight:bold;color:${H};">Reporte de pickings pendientes (comparativo)</div>
+    <div style="font-size:8pt;color:#555;margin-top:2px;">
+      <strong>Centro: <span style="text-decoration:underline;">${centro}</span></strong>
+      &nbsp;&nbsp;Corte anterior <strong>${fechaA}</strong> vs Corte actual <strong>${fechaB}</strong>
+      ${filtroLabel!=='Todos los centros'?`&nbsp;·&nbsp;<em style="color:#888;font-size:7.5pt;">${filtroLabel}</em>`:''}
+    </div>
+  </td>
+  <td style="padding:5px 8px;text-align:right;vertical-align:middle;width:130px;">
+    <div style="font-size:7.5pt;color:#888;">${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</div>
+  </td>
+</tr>
+</table>
+<div style="background:${O};height:3px;margin-bottom:8px;"></div>
+
+<!-- FILA 1: Indicadores Comparativos (izq) + Plazo de Entrega (der) -->
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:8px;">
+<tr>
+  <td width="56%" style="vertical-align:top;padding-right:7px;">
+    <h2>■ 1. Indicadores Comparativos del Centro</h2>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <th class="tl" style="min-width:130px;">Indicador</th>
+      <th class="tc">⚪ Corte A<br><span style="font-weight:400;font-size:7pt;">${fechaA}</span></th>
+      <th class="tc">⚫ Corte B<br><span style="font-weight:400;font-size:7pt;">${fechaB}</span></th>
+      <th class="tc">Variación</th>
+      <th class="tc">Tendencia</th>
+    </tr>
+    ${[
+      {l:'PEDIDOS PENDIENTES DE PICKING', a:dA.pedidos||0,    b:dB.pedidos||0,    f:fmt},
+      {l:"SKU'S PENDIENTES",             a:dA.renglones||0,  b:dB.renglones||0,  f:fmt},
+      {l:'ZVA05VTAS',                    a:dA.vtas||0,       b:dB.vtas||0,       f:fmt},
+      {l:'KUMO ENTREGAS/VL06O',          a:dA.kumo||0,       b:dB.kumo||0,       f:fmt},
+      {l:'COSTO PENDIENTE',              a:dA.costo||0,      b:dB.costo||0,      f:v=>'$'+fmtM(v)},
+    ].map((k,i)=>{
+      const bg=i%2===0?'class="bg1"':'';
+      const dv=k.b-k.a, pc=k.a>0?((dv/k.a)*100).toFixed(1):null;
+      const varTxt=pc!==null?(parseFloat(pc)>=0?'+':'')+pc+'%':'—';
+      const col=dv<0?'#1E8449':dv>0?'#C0392B':'#555';
+      const tend=dv===0?'= 0.0%':dv<0?`▼ ${varTxt}`:`▲ ${varTxt}`;
+      return `<tr ${bg}>
+        <td class="tl" style="font-weight:600;font-size:7.5pt;text-transform:uppercase;">${k.l}</td>
+        <td class="tc" style="color:#1A5276;font-weight:bold;">${k.f(k.a)}</td>
+        <td class="tc" style="color:#1A5276;font-weight:bold;">${k.f(k.b)}</td>
+        <td class="tc" style="color:${col};font-weight:bold;">${varTxt}</td>
+        <td class="tc" style="color:${col};font-weight:bold;">${tend}</td>
+      </tr>`;
+    }).join('')}
+    </table>
+  </td>
+  <td width="44%" style="vertical-align:top;padding-left:7px;">
+    <h2>■ Plazo de Entrega por Centro</h2>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <th class="tl">Plazo de Entrega</th>
+      <th class="tc">⚪ Corte A</th>
+      <th class="tc">⚫ Corte B</th>
+      <th class="tc">Δ</th>
+    </tr>
+    ${plazosC.length>0 ? plazosC.map((p,i)=>{
+      const pA=dA.plazos?.[p]||0, pB=dB.plazos?.[p]||0, dv=pB-pA;
+      const sym=dv>0?`▲ ${dv}`:dv<0?`▼ ${Math.abs(dv)}`:'=';
+      const sc=dv>0?'#C0392B':dv<0?'#1E8449':'#555';
+      const isPrio=PRIO.includes(p);
+      const bg=i%2===0?'class="bg1"':'';
+      return `<tr ${bg}>
+        <td class="tl" style="font-weight:${isPrio?700:400};color:${isPrio?O:'#333'};">${isPrio?'⚡ ':''}${p}</td>
+        <td class="tc" style="color:#1A5276;font-weight:bold;">${fmt(pA)}</td>
+        <td class="tc" style="color:#1A5276;font-weight:bold;">${fmt(pB)}</td>
+        <td class="tc" style="color:${sc};font-weight:bold;">${sym}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="4" class="tc" style="color:#888;font-style:italic;font-size:7.5pt;">Sin datos de plazo</td></tr>`}
+    </table>
+  </td>
+</tr>
+</table>
+
+<!-- FILA 2: Evolución (izq) + Renglones cerrados/nuevos (der) -->
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:8px;">
+<tr>
+  <td width="30%" style="vertical-align:top;padding-right:7px;">
+    <h2>■ 3. Evolución de Plazos de Entrega por Centro</h2>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <th class="tl">Centro</th>
+      <th class="tc">Ped. A</th>
+      <th class="tc">Ped. B</th>
+      <th class="tc">Δ Pedidos</th>
+    </tr>
+    <tr class="bg1">
+      <td class="tl" style="font-weight:700;color:${H};">${centro}</td>
+      <td class="tc" style="color:#1A5276;font-weight:bold;">${fmt(pedA2)}</td>
+      <td class="tc" style="color:#1A5276;font-weight:bold;">${fmt(pedB2)}</td>
+      <td class="tc" style="color:${col2};font-weight:bold;">${diff2>=0?'+':''}${fmt(diff2)}</td>
+    </tr>
+    </table>
+  </td>
+  <td width="70%" style="vertical-align:top;padding-left:7px;">
+    <h2>■ 5. Renglones Cerrados vs Nuevos — Avance entre Cargas</h2>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <th class="tc">Reng.<br>Corte A</th>
+      <th class="tc">Reng.<br>Corte B</th>
+      <th class="tc verde">✅ Cerrados</th>
+      <th class="tc verde">% Avance</th>
+      <th class="tc">Permanecen</th>
+      <th class="tc ambar">🆕 Nuevos</th>
+      <th class="tc ambar">% Nuevos</th>
+    </tr>
+    <tr class="bg1">
+      <td class="tc" style="font-weight:bold;">${fmt(totAc)}</td>
+      <td class="tc" style="font-weight:bold;">${fmt(totBc)}</td>
+      <td class="tc" style="font-weight:bold;color:#1E8449;font-size:10pt;">${fmt(renC.cerrados)}</td>
+      <td class="tc" style="font-weight:bold;color:#1E8449;font-size:10pt;">${renC.pctAvance>0?renC.pctAvance.toFixed(1):'0.0'}%</td>
+      <td class="tc" style="font-weight:bold;">${fmt(permanecenC)}</td>
+      <td class="tc" style="font-weight:bold;color:#B8860B;font-size:10pt;">${fmt(renC.nuevos)}</td>
+      <td class="tc" style="font-weight:bold;color:#B8860B;font-size:10pt;">${renC.pctNuevos>0?renC.pctNuevos.toFixed(1):'0.0'}%</td>
+    </tr>
+    </table>
+    ${totAc===0&&totBc===0?`<p style="color:#888;font-style:italic;font-size:7.5pt;margin-top:4px;">⚠️ Requiere cargas guardadas con versión actualizada del dashboard.</p>`:''}
+  </td>
+</tr>
+</table>
+
+<!-- RESUMEN GENERAL -->
+<div style="border-left:4px solid ${O};padding:3px 10px;margin-bottom:6px;">
+${(()=>{
+  const lines=[];
+  if(item){
+    const ps=item.pedDiff.toFixed(1);
+    const c=parseFloat(ps)<0?'#1E8449':'#C0392B';
+    lines.push(`<p><span style="color:${c};font-weight:bold;">${parseFloat(ps)<0?'▼':'▲'}</span> ${parseFloat(ps)<0?'Disminución':'Incremento'} moderado: ${parseFloat(ps)>=0?'+':''}${ps}% (${dabs(item.pedA,item.pedB)} pedidos).</p>`);
+    if(item.cosDiff!==null){const cc=item.cosDiff<0?'#1E8449':'#C0392B';lines.push(`<p><span style="color:${cc};font-weight:bold;">⏱</span> Costo ${item.cosDiff<=0?'disminuyó':'aumentó'} ${item.cosDiff.toFixed(1)}%.</p>`);}
+    if(item.inmA>0||item.inmB>0){const id=item.inmB-item.inmA;const ci=id>0?'#C0392B':'#1E8449';lines.push(`<p><span style="color:${ci};font-weight:bold;">⚡</span> Entregas inmediatas: ${item.inmA} → ${item.inmB} (${id>=0?'+':''}${id})${id>0?'. Prioridad máxima.':'. Mejora registrada.'}</p>`);}
+  }
+  if(renC.cerrados>0||renC.nuevos>0){
+    const av=renC.pctAvance.toFixed(1);
+    const cAv=parseFloat(av)>=50?'#1E8449':'#C0392B';
+    lines.push(`<p><span style="color:${cAv};font-weight:bold;">📋</span> Avance: ${av}% de renglones cerrados (${fmt(renC.cerrados)}). Meta: superar 50%.</p>`);
+    if(renC.nuevos>renC.cerrados) lines.push(`<p><span style="color:#C0392B;font-weight:bold;">⚠</span> Nuevos pedidos (${fmt(renC.nuevos)}) superan a los cerrados (${fmt(renC.cerrados)}). La carga neta aumentó.</p>`);
+  }
+  lines.push(`<p><span style="color:${O};font-weight:bold;">🔧</span> Acción: validar inventario disponible y liberar renglones de entrega inmediata en las próximas 24h.</p>`);
+  lines.push(`<p style="color:#555;margin-top:4px;">Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa raíz del problema.</p>`);
+  return lines.join('');
+})()}
+</div>
+
+<!-- PIE -->
+<div class="pie" style="padding:5px 14px;margin-top:4px;">
+  <span style="color:#BDC3C7;font-size:7.5pt;">
+    Generado automáticamente — Dashboard Picking Pendiente GK &nbsp;·&nbsp;
+    ${new Date().toLocaleDateString('es-MX',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} &nbsp;·&nbsp;
+    Francisco Javier Cerezo Ramos
+  </span>
+</div>
+
+</body></html>`;
+
+      // Guardar como .html print-ready en el ZIP (se imprime como PDF desde el navegador)
+      const blob = new Blob([htmlPDF], {type:'text/html;charset=utf-8'});
+      const buf = await blob.arrayBuffer();
+      zip.file(`Picking_Comp_${centro}_${ts}.html`, buf);
+    }
+
+    if (btn) btn.textContent = '⏳ Comprimiendo...';
+    await new Promise(r=>setTimeout(r,10));
+
+    // Agregar README con instrucciones para imprimir como PDF
+    const readme = `INSTRUCCIONES — Informes de Picking por Centro
+===============================================
+Cada archivo .html es un reporte listo para imprimir como PDF.
+
+PASOS:
+1. Abre el archivo .html en Chrome, Edge o Firefox
+2. Presiona Ctrl+P (Windows) o Cmd+P (Mac)
+3. En "Destino" selecciona: "Guardar como PDF"
+4. Configuración recomendada:
+   - Orientación: Horizontal (Landscape)  ← ya preconfigurado en el archivo
+   - Tamaño de papel: Carta
+   - Márgenes: Mínimos o Ninguno
+   - ✅ Activar: "Gráficos de fondo" (Background graphics)
+5. Guardar PDF
+
+Los archivos ya tienen @page landscape carta con márgenes estrechos configurados.
+
+Generado: ${new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+Dashboard Picking Pendiente GK — Francisco Javier Cerezo Ramos
+`;
+    zip.file('INSTRUCCIONES_IMPRIMIR_PDF.txt', readme);
+
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`Informes_Comp_PorCentro_${ts}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showToast(`✅ ZIP con ${centrosParaDoc.length} reporte(s) — abrir cada .html y Ctrl+P → Guardar como PDF`);
+
+  } catch(err) {
+    showToast('Error: '+err.message); console.error(err);
+  }
+  if (btn) { btn.disabled=false; btn.innerHTML='📊 PDF por Centro (ZIP)'; }
+}
+
+
+// ===================================================
+// ===================================================
+async function descargarPDFRealPorCentroZip() {
+  const cs = window._lastCompState;
+  if (!cs) { showToast('⚠️ Ejecuta primero la comparación'); return; }
+
+  // Cargar jsPDF y html2canvas si no están
+  async function loadScript(src) {
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  } catch(e) { showToast('Error cargando librerías: ' + e.message); return; }
+
+  const btn = document.getElementById('btn-zip-pdf-centros');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando PDFs...'; }
+  await new Promise(r => setTimeout(r, 80));
+
+  try {
+    const zip = new JSZip();
+    const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const { jsPDF } = window.jspdf;
+
+    const centrosParaDoc = cs.centroFiltro
+      ? [cs.centroFiltro]
+      : [...new Set([...Object.keys(cs.centrosA),...Object.keys(cs.centrosB)])].sort();
+
+    // Contenedor oculto para renderizar cada centro
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;background:#fff;z-index:-1;';
+    document.body.appendChild(wrap);
+
+    for (const centro of centrosParaDoc) {
+      if (btn) btn.textContent = `⏳ PDF ${centro}...`;
+      await new Promise(r => setTimeout(r, 10));
+
+      // Reutilizar buildInformeCentroHtml (misma función que el HTML)
+      wrap.innerHTML = buildInformeCentroHtml(centro, cs);
+      await new Promise(r => setTimeout(r, 120));
+
+      const canvas = await html2canvas(wrap.firstElementChild || wrap, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: 1100,
+      });
+
+      // Tamaño carta horizontal: 279.4 x 215.9 mm
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+      const pW = pdf.internal.pageSize.getWidth();
+      const pH = pdf.internal.pageSize.getHeight();
+      const margin = 5;
+      const imgW = pW - margin * 2;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+      if (imgH <= pH - margin * 2) {
+        pdf.addImage(imgData, 'JPEG', margin, margin, imgW, imgH);
+      } else {
+        // Múltiples páginas si el contenido es muy alto
+        let yOffset = 0;
+        const pageH = pH - margin * 2;
+        const totalH = imgH;
+        while (yOffset < totalH) {
+          const sliceH = Math.min(pageH, totalH - yOffset);
+          const sliceCanvas = document.createElement('canvas');
+          const ratio = canvas.width / imgW;
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH * ratio;
+          const ctx = sliceCanvas.getContext('2d');
+          ctx.drawImage(canvas, 0, yOffset * ratio, canvas.width, sliceH * ratio, 0, 0, canvas.width, sliceH * ratio);
+          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+          if (yOffset > 0) pdf.addPage();
+          pdf.addImage(sliceData, 'JPEG', margin, margin, imgW, sliceH);
+          yOffset += sliceH;
+        }
+      }
+
+      const pdfBytes = pdf.output('arraybuffer');
+      zip.file(`Picking_Comp_${centro}_${ts}.pdf`, pdfBytes);
+    }
+
+    document.body.removeChild(wrap);
+
+    if (btn) btn.textContent = '⏳ Comprimiendo...';
+    await new Promise(r => setTimeout(r, 10));
+    const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{level:6} });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `PDFs_Picking_PorCentro_${ts}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`✅ ${centrosParaDoc.length} PDF(s) descargados en ZIP`);
+
+  } catch(err) {
+    showToast('Error PDF: ' + err.message); console.error(err);
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '📄 PDF por Centro (ZIP)'; }
+}
+
+// ===================================================
+//  PNG POR CENTRO — html2canvas
+// ===================================================
+async function descargarPNGPorCentroZip() {
+  const cs = window._lastCompState;
+  if (!cs) { showToast('⚠️ Ejecuta primero la comparación'); return; }
+
+  async function loadScript(src) {
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  } catch(e) { showToast('Error cargando html2canvas: ' + e.message); return; }
+
+  const btn = document.getElementById('btn-zip-png-centros');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando PNGs...'; }
+  await new Promise(r => setTimeout(r, 80));
+
+  try {
+    const zip = new JSZip();
+    const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+
+    const centrosParaDoc = cs.centroFiltro
+      ? [cs.centroFiltro]
+      : [...new Set([...Object.keys(cs.centrosA),...Object.keys(cs.centrosB)])].sort();
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:1180px;background:#fff;z-index:-1;padding:16px;';
+    document.body.appendChild(wrap);
+
+    for (const centro of centrosParaDoc) {
+      if (btn) btn.textContent = `⏳ PNG ${centro}...`;
+      await new Promise(r => setTimeout(r, 10));
+
+      wrap.innerHTML = buildInformeCentroHtml(centro, cs);
+      await new Promise(r => setTimeout(r, 120));
+
+      const canvas = await html2canvas(wrap.firstElementChild || wrap, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: 1180,
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64 = dataUrl.split(',')[1];
+      zip.file(`Picking_Comp_${centro}_${ts}.png`, base64, { base64: true });
+    }
+
+    document.body.removeChild(wrap);
+
+    if (btn) btn.textContent = '⏳ Comprimiendo...';
+    await new Promise(r => setTimeout(r, 10));
+    const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{level:6} });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `PNGs_Picking_PorCentro_${ts}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`✅ ${centrosParaDoc.length} PNG(s) descargados en ZIP`);
+
+  } catch(err) {
+    showToast('Error PNG: ' + err.message); console.error(err);
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '🖼 PNG por Centro (ZIP)'; }
+}
+
+// ===================================================
+//  HELPER COMPARTIDO — HTML de un centro para render
+//  Usado por PDF y PNG (reutiliza la misma plantilla que el ZIP HTML)
+// ===================================================
+function buildInformeCentroHtml(centro, cs) {
+  const { cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro } = cs;
+  const H='#1F3864', O='#C55A11';
+  const PRIO = ['ENTREGA INMEDIATA','ENVÍO A DOMICILIO'];
+  const logoTag = getLogoTag ? getLogoTag(36) : `<span style="background:#C55A11;border-radius:4px;padding:2px 8px;font-weight:900;color:#fff;font-size:16pt;">GK</span><span style="font-weight:900;color:#1F3864;font-size:18pt;margin-left:5px;">Kuroda</span>`;
+
+  const fechaA = new Date(cA.ts).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}).replace(/\s/g,'/');
+  const fechaB = new Date(cB.ts).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}).replace(/\s/g,'/');
+  const filtroLabel = [centroFiltro&&`Centro: ${centroFiltro}`, orgFiltro&&`Org: ${orgFiltro}`, txFiltro&&`Tx: ${txFiltro}`].filter(Boolean).join(' · ') || 'Todos los centros';
+
+  const dA = centrosA[centro]||{}, dB = centrosB[centro]||{};
+  const allP = [...new Set([...Object.keys(dA.plazos||{}),...Object.keys(dB.plazos||{})])];
+  const plazosC = [...PRIO.filter(p=>allP.includes(p)), ...allP.filter(p=>!PRIO.includes(p)).sort()];
+
+  // Renglones — calcular directamente desde pedidoCodigoList filtrado por centro
+  let listA = (cA.pedidoCodigoList||[]).filter(x=>x.cen===centro);
+  let listB = (cB.pedidoCodigoList||[]).filter(x=>x.cen===centro);
+  const totAc = listA.length, totBc = listB.length;
+  const keyFnR = x => x.ped+'||'+x.cod;
+  const setAr = new Set(listA.map(keyFnR));
+  const setBr = new Set(listB.map(keyFnR));
+  const cerradosC  = listA.filter(x => !setBr.has(keyFnR(x))).length;
+  const nuevosC    = listB.filter(x => !setAr.has(keyFnR(x))).length;
+  const permanecenC = listA.filter(x =>  setBr.has(keyFnR(x))).length;
+  const pctAvanceC = totAc>0 ? (cerradosC/totAc*100) : 0;
+  const pctNuevosC = totBc>0 ? (nuevosC/totBc*100)   : 0;
+  const ren = { cerrados:cerradosC, nuevos:nuevosC, pctAvance:pctAvanceC, pctNuevos:pctNuevosC, balance:cerradosC-nuevosC };
+
+  // Diagnóstico
+  const allCentrosRaw = [...new Set([...Object.keys(centrosA),...Object.keys(centrosB)])];
+  const centroItems = allCentrosRaw.map(c=>{
+    const dAi=centrosA[c]||{}, dBi=centrosB[c]||{};
+    const pA=dAi.pedidos||0, pB=dBi.pedidos||0;
+    const pedDiff = pA>0?((pB-pA)/pA*100):(pB>0?100:0);
+    const cosDiff = (dAi.costo||0)>0?(((dBi.costo||0)-(dAi.costo||0))/(dAi.costo||0)*100):null;
+    return {c, pedA:pA, pedB:pB, pedDiff, cosDiff, inmA:dAi.plazos?.['ENTREGA INMEDIATA']||0, inmB:dBi.plazos?.['ENTREGA INMEDIATA']||0};
+  }).sort((a,b)=>a.pedDiff-b.pedDiff);
+  const item = centroItems.find(x=>x.c===centro)||null;
+
+  // Evolución
+  const pedA2=dA.pedidos||0, pedB2=dB.pedidos||0, diff2=pedB2-pedA2;
+  const col2=diff2<0?'#1E8449':diff2>0?'#C0392B':'#555';
+
+  // Resumen bullets
+  const bullets=[];
+  if(item){
+    const ps=item.pedDiff.toFixed(1), cv=parseFloat(ps)<0?'#1E8449':'#C0392B';
+    bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:${cv};font-weight:bold;">${parseFloat(ps)<0?'▼':'▲'}</span> ${parseFloat(ps)<0?'Disminución':'Incremento'} moderado: ${parseFloat(ps)>=0?'+':''}${ps}% (${diff2>=0?'+':''}${fmt(diff2)} pedidos).</p>`);
+    if(item.cosDiff!==null){const cc=item.cosDiff<0?'#1E8449':'#C0392B';bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:${cc};font-weight:bold;">⏱</span> Costo ${item.cosDiff<=0?'disminuyó':'aumentó'} ${item.cosDiff.toFixed(1)}%.</p>`);}
+    if(item.inmA>0||item.inmB>0){const id=item.inmB-item.inmA;const ci=id>0?'#C0392B':'#1E8449';bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:${ci};font-weight:bold;">⚡</span> Entregas inmediatas: ${item.inmA} → ${item.inmB} (${id>=0?'+':''}${id})${id>0?'. Prioridad máxima.':'. Mejora registrada.'}</p>`);}
+  }
+  if(ren.cerrados>0||ren.nuevos>0){
+    const av=ren.pctAvance.toFixed(1), cAv=parseFloat(av)>=50?'#1E8449':'#C0392B';
+    bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:${cAv};font-weight:bold;">📋</span> Avance: ${av}% de renglones cerrados (${fmt(ren.cerrados)}). Meta: superar 50%.</p>`);
+    if(ren.nuevos>ren.cerrados) bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:#C0392B;font-weight:bold;">⚠</span> Nuevos pedidos (${fmt(ren.nuevos)}) superan a los cerrados (${fmt(ren.cerrados)}). La carga neta aumentó.</p>`);
+  }
+  bullets.push(`<p style="margin:4px 0;font-size:8.5pt;"><span style="color:${O};font-weight:bold;">🔧</span> Acción: validar inventario disponible y liberar renglones de entrega inmediata en las próximas 24h.</p>`);
+  bullets.push(`<p style="margin-top:5px;font-size:8pt;color:#555;">Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa raíz del problema.</p>`);
+
+  return `<div style="font-family:Arial,Calibri,sans-serif;font-size:8.5pt;color:#1a1a1a;background:#fff;padding:14px 16px;width:1100px;">
+
+  <!-- CABECERA -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:0;">
+  <tr>
+    <td style="padding:6px 8px;vertical-align:middle;width:150px;">${logoTag}</td>
+    <td style="padding:6px 8px;text-align:center;vertical-align:middle;">
+      <div style="font-size:13pt;font-weight:bold;color:${H};">Reporte de pickings pendientes (comparativo)</div>
+      <div style="font-size:8.5pt;color:#555;margin-top:2px;"><strong>Centro: <span style="text-decoration:underline;">${centro}</span></strong> &nbsp;&nbsp;Corte anterior <strong>${fechaA}</strong> vs Corte actual <strong>${fechaB}</strong>${filtroLabel!=='Todos los centros'?` &nbsp;·&nbsp; <em style="color:#888;font-size:8pt;">${filtroLabel}</em>`:''}</div>
+    </td>
+    <td style="padding:6px 8px;text-align:right;vertical-align:middle;width:120px;">
+      <div style="font-size:7.5pt;color:#888;">${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</div>
+    </td>
+  </tr>
+  </table>
+  <div style="background:${O};height:3px;margin-bottom:10px;"></div>
+
+  <!-- FILA 1: Indicadores + Plazo -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:10px;">
+  <tr>
+    <td width="56%" style="vertical-align:top;padding-right:8px;">
+      <div style="font-size:9pt;font-weight:800;color:${H};border-bottom:2px solid ${O};padding-bottom:2px;margin-bottom:5px;">■ 1. Indicadores Comparativos del Centro</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr style="background:${H};">
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:left;min-width:130px;">Indicador</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">⚪ Corte A<br><span style="font-weight:400;font-size:7pt;">${fechaA}</span></th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">⚫ Corte B<br><span style="font-weight:400;font-size:7pt;">${fechaB}</span></th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Variación</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Tendencia</th>
+      </tr>
+      ${[
+        {l:'PEDIDOS PENDIENTES DE PICKING', a:dA.pedidos||0,   b:dB.pedidos||0,   f:fmt},
+        {l:"SKU'S PENDIENTES",             a:dA.renglones||0, b:dB.renglones||0, f:fmt},
+        {l:'ZVA05VTAS',                    a:dA.vtas||0,      b:dB.vtas||0,      f:fmt},
+        {l:'KUMO ENTREGAS/VL06O',          a:dA.kumo||0,      b:dB.kumo||0,      f:fmt},
+        {l:'COSTO PENDIENTE',              a:dA.costo||0,     b:dB.costo||0,     f:v=>'$'+fmtM(v)},
+      ].map((k,i)=>{
+        const bg=i%2===0?'#EBF5FB':'#fff';
+        const dv=k.b-k.a, pc=k.a>0?((dv/k.a)*100).toFixed(1):null;
+        const varTxt=pc!==null?(parseFloat(pc)>=0?'+':'')+pc+'%':'—';
+        const col=dv<0?'#1E8449':dv>0?'#C0392B':'#555';
+        const tend=dv===0?'= 0.0%':dv<0?`▼ ${varTxt}`:`▲ ${varTxt}`;
+        return `<tr style="background:${bg};">
+          <td style="padding:4px 7px;font-weight:600;font-size:7.5pt;text-transform:uppercase;border:1px solid #BDC3C7;">${k.l}</td>
+          <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${k.f(k.a)}</td>
+          <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${k.f(k.b)}</td>
+          <td style="padding:4px 7px;text-align:center;color:${col};font-weight:bold;border:1px solid #BDC3C7;">${varTxt}</td>
+          <td style="padding:4px 7px;text-align:center;color:${col};font-weight:bold;border:1px solid #BDC3C7;">${tend}</td>
+        </tr>`;
+      }).join('')}
+      </table>
+    </td>
+    <td width="44%" style="vertical-align:top;padding-left:8px;">
+      <div style="font-size:9pt;font-weight:800;color:${H};border-bottom:2px solid ${O};padding-bottom:2px;margin-bottom:5px;">■ Plazo de Entrega por Centro</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr style="background:${H};">
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:left;">Plazo de Entrega</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">⚪ Corte A</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">⚫ Corte B</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Δ</th>
+      </tr>
+      ${plazosC.length>0 ? plazosC.map((p,i)=>{
+        const pA=dA.plazos?.[p]||0, pB=dB.plazos?.[p]||0, dv=pB-pA;
+        const sym=dv>0?`▲ ${dv}`:dv<0?`▼ ${Math.abs(dv)}`:'=';
+        const sc=dv>0?'#C0392B':dv<0?'#1E8449':'#555';
+        const isPrio=PRIO.includes(p), bg=i%2===0?'#EBF5FB':'#fff';
+        return `<tr style="background:${bg};">
+          <td style="padding:4px 7px;font-weight:${isPrio?700:400};color:${isPrio?O:'#333'};border:1px solid #BDC3C7;">${isPrio?'⚡ ':''}${p}</td>
+          <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${fmt(pA)}</td>
+          <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${fmt(pB)}</td>
+          <td style="padding:4px 7px;text-align:center;color:${sc};font-weight:bold;border:1px solid #BDC3C7;">${sym}</td>
+        </tr>`;
+      }).join('') : `<tr><td colspan="4" style="padding:4px 7px;text-align:center;color:#888;font-style:italic;border:1px solid #BDC3C7;">Sin datos de plazo</td></tr>`}
+      </table>
+    </td>
+  </tr>
+  </table>
+
+  <!-- FILA 2: Evolución + Renglones -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:10px;">
+  <tr>
+    <td width="28%" style="vertical-align:top;padding-right:8px;">
+      <div style="font-size:9pt;font-weight:800;color:${H};border-bottom:2px solid ${O};padding-bottom:2px;margin-bottom:5px;">■ 3. Evolución de Plazos de Entrega por Centro</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr style="background:${H};">
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:left;">Centro</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Ped. A</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Ped. B</th>
+        <th style="padding:4px 7px;color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Δ Pedidos</th>
+      </tr>
+      <tr style="background:#EBF5FB;">
+        <td style="padding:4px 7px;font-weight:700;color:${H};border:1px solid #BDC3C7;">${centro}</td>
+        <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${fmt(pedA2)}</td>
+        <td style="padding:4px 7px;text-align:center;color:#1A5276;font-weight:bold;border:1px solid #BDC3C7;">${fmt(pedB2)}</td>
+        <td style="padding:4px 7px;text-align:center;color:${col2};font-weight:bold;border:1px solid #BDC3C7;">${diff2>=0?'+':''}${fmt(diff2)}</td>
+      </tr>
+      </table>
+    </td>
+    <td width="72%" style="vertical-align:top;padding-left:8px;">
+      <div style="font-size:9pt;font-weight:800;color:${H};border-bottom:2px solid ${O};padding-bottom:2px;margin-bottom:5px;">■ 5. Renglones Cerrados vs Nuevos — Avance entre Cargas</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <th style="padding:4px 7px;background:${H};color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Reng.<br>Corte A</th>
+        <th style="padding:4px 7px;background:${H};color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Reng.<br>Corte B</th>
+        <th style="padding:4px 7px;background:#1E8449;color:#fff;font-size:7.5pt;border:1px solid #1E8449;text-align:center;">✅ Cerrados</th>
+        <th style="padding:4px 7px;background:#1E8449;color:#fff;font-size:7.5pt;border:1px solid #1E8449;text-align:center;">% Avance</th>
+        <th style="padding:4px 7px;background:${H};color:#fff;font-size:7.5pt;border:1px solid #93a8c2;text-align:center;">Permanecen</th>
+        <th style="padding:4px 7px;background:#B8860B;color:#fff;font-size:7.5pt;border:1px solid #B8860B;text-align:center;">🆕 Nuevos</th>
+        <th style="padding:4px 7px;background:#B8860B;color:#fff;font-size:7.5pt;border:1px solid #B8860B;text-align:center;">% Nuevos</th>
+      </tr>
+      <tr style="background:#EBF5FB;">
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;border:1px solid #BDC3C7;">${fmt(totAc)}</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;border:1px solid #BDC3C7;">${fmt(totBc)}</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;color:#1E8449;font-size:10pt;border:1px solid #BDC3C7;">${fmt(ren.cerrados)}</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;color:#1E8449;font-size:10pt;border:1px solid #BDC3C7;">${ren.pctAvance>0?ren.pctAvance.toFixed(1):'0.0'}%</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;border:1px solid #BDC3C7;">${fmt(permanecenC)}</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;color:#B8860B;font-size:10pt;border:1px solid #BDC3C7;">${fmt(ren.nuevos)}</td>
+        <td style="padding:5px 7px;text-align:center;font-weight:bold;color:#B8860B;font-size:10pt;border:1px solid #BDC3C7;">${ren.pctNuevos>0?ren.pctNuevos.toFixed(1):'0.0'}%</td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+  </table>
+
+  <!-- RESUMEN GENERAL -->
+  <div style="border-left:4px solid ${O};padding:3px 10px;margin-bottom:8px;">
+    ${bullets.join('')}
+  </div>
+
+  <!-- PIE -->
+  <div style="background:${H};padding:6px 14px;margin-top:6px;">
+    <span style="color:#BDC3C7;font-size:7.5pt;">
+      Generado automáticamente — Dashboard Picking Pendiente GK &nbsp;·&nbsp;
+      ${new Date().toLocaleDateString('es-MX',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} &nbsp;·&nbsp;
+      Francisco Javier Cerezo Ramos
+    </span>
+  </div>
+</div>`;
+}
 function exportarInformeComparacionCompleto() {
   if (!window._lastCompState) { showToast('⚠️ Ejecuta primero la comparación'); return; }
   const { cA, cB, centrosA, centrosB, centroFiltro, orgFiltro, txFiltro } = window._lastCompState;
@@ -4524,7 +5324,433 @@ async function anzExportZip() {
   };
 })();
 
-// ===== INIT: cargar historial al abrir =====
+// ============================================================
+//  LOGO CONFIGURABLE
+// ============================================================
+let LOGO_BASE64 = '';
+
+function onLogoFileChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LOGO_BASE64 = e.target.result;
+    document.getElementById('logo-url-input').value = '';
+    showToast('✅ Logo cargado');
+  };
+  reader.readAsDataURL(file);
+}
+function onLogoUrlChange(input) {
+  LOGO_BASE64 = input.value.trim();
+  if (LOGO_BASE64) document.getElementById('logo-file-input').value = '';
+}
+function getLogoTag(h) {
+  if (LOGO_BASE64) return `<img src="${LOGO_BASE64}" alt="Logo" style="height:${h}px;max-width:160px;object-fit:contain;vertical-align:middle;">`;
+  return `<span style="display:inline-block;background:#C55A11;border-radius:5px;padding:2px 8px;font-size:${Math.round(h*0.5)}pt;font-weight:900;color:#fff;font-family:Arial;vertical-align:middle;">GK</span>
+          <span style="font-size:${Math.round(h*0.55)}pt;font-weight:900;color:#1F3864;font-family:Arial;vertical-align:middle;margin-left:5px;">Kuroda</span>`;
+}
+
+// ============================================================
+//  ZIP DE INFORMES POR CENTRO  — 1 .doc por cada centro
+//  Tablas: Indicadores Comparativos · Plazo de Entrega (corte A vs B) ·
+//          Renglones Cerrados/Nuevos · Top Pedidos · Acuerdos · Resumen general
+// ============================================================
+async function descargarInformesZipPorSucursal() {
+  if (!FILTERED || FILTERED.length === 0) { showToast('⚠️ Carga un archivo Excel primero'); return; }
+  const btn = document.querySelector('[onclick="descargarInformesZipPorSucursal()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparando ZIP...'; }
+  await new Promise(r => setTimeout(r, 60));
+  try {
+    const zip = new JSZip();
+    const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const cs = window._lastCompState || null;
+
+    // Agrupar FILTERED por Centro
+    const centroMap = {};
+    FILTERED.forEach(r => {
+      const c = col(r, 'Centro') || '(Sin centro)';
+      if (!centroMap[c]) centroMap[c] = [];
+      centroMap[c].push(r);
+    });
+
+    const sortedCentros = Object.keys(centroMap).sort();
+    for (const centro of sortedCentros) {
+      if (btn) btn.textContent = `⏳ ${centro}...`;
+      await new Promise(r => setTimeout(r, 8));
+      const html = buildInformeCentroWord(centro, centroMap[centro], cs, dateStr, ts);
+      const blob = new Blob(['\uFEFF' + html], { type: 'application/msword;charset=utf-8' });
+      const buf = await blob.arrayBuffer();
+      zip.file(`Picking_${centro}_${ts}.doc`, buf);
+    }
+
+    if (btn) btn.textContent = '⏳ Comprimiendo...';
+    await new Promise(r => setTimeout(r, 10));
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `Informes_Picking_PorCentro_${ts}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`✅ ZIP con ${sortedCentros.length} informes descargado`);
+  } catch (err) {
+    showToast('Error: ' + err.message); console.error(err);
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '📊 Informes Word por Centro (ZIP)'; }
+}
+
+// -------------------------------------------------------
+//  Construir el .doc de UN centro  (mismas tablas del dashboard)
+// -------------------------------------------------------
+function buildInformeCentroWord(centro, rows, cs, dateStr, ts) {
+  const PRIO = ['ENTREGA INMEDIATA', 'ENVÍO A DOMICILIO'];
+
+  // ── KPIs corte B (datos actuales) ──────────────────────────
+  const pedB   = countDistinct(rows, 'Numero de Pedido');
+  const renB   = rows.length;
+  const cosB   = sumField(rows, 'Costo de Venta Contable Pendiente');
+  const cantB  = sumField(rows, 'Cantidad Pendiente');
+  const kuB    = rows.filter(r => col(r,'Transaccion')==='KUMO ENTREGAS').length;
+  const vtB    = rows.filter(r => col(r,'Transaccion')==='ZVA05VTAS').length;
+  const orgNom = col(rows[0],'Organizacion de Ventas') || '';
+
+  // ── KPIs corte A (snapshot comparación) ────────────────────
+  let haComp = false, fechaA = '', fechaB = '';
+  let pedA = 0, renA = 0, cosA = 0, kuA = 0, vtA = 0;
+  let plazoSnapA = {}; // { plazo: nPedidosUnicos }
+  let rengCerrados = 0, rengNuevos = 0, permanecen = 0;
+  let pctAvance = '0.0', pctNuevos = '0.0';
+
+  if (cs && cs.cA && cs.cB) {
+    const dA = cs.cA.centroData?.[centro];
+    const dB = cs.cB.centroData?.[centro];
+    if (dA && dB) {
+      haComp = true;
+      fechaA = new Date(cs.cA.ts).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'2-digit' }).replace(',','').replace(/ /g,'/');
+      fechaB = new Date(cs.cB.ts).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'2-digit' }).replace(',','').replace(/ /g,'/');
+      pedA = dA.pedidos || 0; renA = dA.renglones || 0;
+      cosA = dA.costo || 0;
+      kuA  = dA.kumo  || 0; vtA  = dA.vtas  || 0;
+      plazoSnapA = dA.plazos || {}; // { plazo: count }
+    }
+    // Renglones cerrados / nuevos desde pedidoCodigoList
+    const listA = (cs.cA.pedidoCodigoList || []).filter(x => x.cen === centro);
+    const listB = (cs.cB.pedidoCodigoList || []).filter(x => x.cen === centro);
+    if (listA.length > 0 || listB.length > 0) {
+      haComp = haComp || true;
+      if (!fechaA) fechaA = new Date(cs.cA.ts).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'2-digit'}).replace(',','').replace(/ /g,'/');
+      if (!fechaB) fechaB = new Date(cs.cB.ts).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'2-digit'}).replace(',','').replace(/ /g,'/');
+      const keyFn = x => x.ped+'||'+x.cod;
+      const setA = new Set(listA.map(keyFn));
+      const setB = new Set(listB.map(keyFn));
+      rengCerrados = listA.filter(x => !setB.has(keyFn(x))).length;
+      rengNuevos   = listB.filter(x => !setA.has(keyFn(x))).length;
+      permanecen   = listA.filter(x =>  setB.has(keyFn(x))).length;
+      pctAvance    = listA.length > 0 ? ((rengCerrados/listA.length)*100).toFixed(1) : '0.0';
+      pctNuevos    = listB.length > 0 ? ((rengNuevos/listB.length)*100).toFixed(1) : '0.0';
+      if (!renA) renA = listA.length;
+      if (!pedA) pedA = [...new Set(listA.map(x=>x.ped))].length;
+    }
+  }
+
+  // ── Plazo de entrega ────────────────────────────────────────
+  const plazoB = {};
+  rows.forEach(r => {
+    const p = col(r,'Plazo de Entrega') || 'Sin dato';
+    const ped = col(r,'Numero de Pedido');
+    if (!plazoB[p]) plazoB[p] = new Set();
+    plazoB[p].add(ped);
+  });
+  const allPlazos = [...new Set([...Object.keys(plazoB), ...Object.keys(plazoSnapA)])];
+  const prio = PRIO.filter(p => allPlazos.includes(p));
+  const resto = allPlazos.filter(p => !PRIO.includes(p)).sort();
+  const plazosOrd = [...prio, ...resto];
+
+  // ── Top pedidos por costo ───────────────────────────────────
+  const pedMap = {};
+  rows.forEach(r => {
+    const p = col(r,'Numero de Pedido'); if (!p) return;
+    const c = parseFloat(col(r,'Costo de Venta Contable Pendiente'))||0;
+    const q = parseFloat(col(r,'Cantidad Pendiente'))||0;
+    const pl = col(r,'Plazo de Entrega')||'';
+    if (!pedMap[p]) pedMap[p] = { costo:0, cant:0, plazo:pl, renglones:0 };
+    pedMap[p].costo += c; pedMap[p].cant += q; pedMap[p].renglones++;
+  });
+  const topPedidos = Object.entries(pedMap).sort((a,b)=>b[1].costo-a[1].costo).slice(0,15);
+
+  // ── Acuerdos (misma lógica de renderAcuerdos) ──────────────
+  const plazos4ac = {};
+  rows.forEach(r => { const p=col(r,'Plazo de Entrega')||'Sin dato'; plazos4ac[p]=(plazos4ac[p]||0)+1; });
+  const acd = {
+    pedidos: pedB, costo: cosB, kumo: kuB, vtas: vtB, renglones: renB,
+    sobrepedidos: rows.filter(r=>col(r,'Plazo de Entrega')==='SOBREPEDIDO').length,
+    apartados:    rows.filter(r=>col(r,'Plazo de Entrega')==='APARTADOS').length,
+    domicilio:    rows.filter(r=>col(r,'Plazo de Entrega')==='ENVÍO A DOMICILIO').length,
+    inmediata:    rows.filter(r=>col(r,'Plazo de Entrega')==='ENTREGA INMEDIATA').length,
+  };
+  const acuerdosList = [];
+  if (acd.pedidos > 300) acuerdosList.push(`Reunión urgente de seguimiento diario: ${fmt(acd.pedidos)} pedidos únicos representa una carga crítica. Asignar coordinador de picking exclusivo.`);
+  else if (acd.pedidos > 100) acuerdosList.push(`Revisión semanal de avance: ${fmt(acd.pedidos)} pedidos pendientes. Establecer meta de reducción del 30% en 2 semanas.`);
+  if (acd.costo > 5000000) acuerdosList.push(`Prioridad ALTA de liberación: $${fmtM(acd.costo)}. Involucrar a gerencia regional para destrabar pedidos de mayor valor.`);
+  else if (acd.costo > 1000000) acuerdosList.push(`Monitoreo de costo pendiente $${fmtM(acd.costo)}: concentrar en los 10 pedidos de mayor valor unitario.`);
+  if (acd.sobrepedidos > 5) acuerdosList.push(`Depurar ${fmt(acd.sobrepedidos)} renglones SOBREPEDIDO: revisar disponibilidad real y cancelar o reprogramar.`);
+  if (acd.apartados > 5)    acuerdosList.push(`Revisar ${fmt(acd.apartados)} renglones APARTADOS: confirmar que el material esté separado en almacén y coordinar entrega.`);
+  if (acd.domicilio > 30)   acuerdosList.push(`Optimizar ${fmt(acd.domicilio)} renglones envío a domicilio: coordinar con logística para cumplir tiempos 24-48h.`);
+  if (acd.kumo > 0 && acd.vtas > 0) {
+    const pk = (acd.kumo/acd.renglones*100).toFixed(0);
+    if (+pk>65) acuerdosList.push(`Alta concentración en KUMO ENTREGAS (${pk}%): capacitar en ZVA05 para agilizar picking.`);
+    else if (+pk<30) acuerdosList.push(`Baja adopción de KUMO ENTREGAS (${pk}%): evaluar flujo logístico e incrementar uso para entregas recurrentes.`);
+  }
+  if (acd.inmediata > 20) acuerdosList.push(`${fmt(acd.inmediata)} renglones ENTREGA INMEDIATA siguen pendientes: revisar bloqueos de almacén y liberar en 24h.`);
+  if (acuerdosList.length < 2) acuerdosList.push(`Mantener seguimiento quincenal: volumen de ${fmt(acd.pedidos)} pedidos requiere disciplina operativa.`);
+  acuerdosList.push(`Inventario sano: validar existencia disponible; si falta — generar OC o solicitar traspaso en ≤5 días hábiles.`);
+  acuerdosList.push(`Compromiso comercial: el equipo de ventas debe depurar pedidos con más de 60 días de antigüedad, re-confirmando con el cliente.`);
+
+  // ── Resumen general ─────────────────────────────────────────
+  const resumen = [];
+  function dp(a,b) { return a>0?((b-a)/a*100).toFixed(1):null; }
+  function dc(a,b) { const d=b-a; return d===0?'#555':d<0?'#1E8449':'#C0392B'; }
+  const immB = plazoB['ENTREGA INMEDIATA']?.size || 0;
+  const immA = plazoSnapA['ENTREGA INMEDIATA'] || 0;
+  if (haComp) {
+    const pp=dp(pedA,pedB);
+    if (pp!==null) { const s=parseFloat(pp)>=0?'+':''; resumen.push({ icon:parseFloat(pp)<=0?'▼':'▲', c:dc(pedA,pedB), t:`${parseFloat(pp)<=0?'Disminución':'Incremento'} moderado: ${s}${pp}% (${pedB-pedA>=0?'+':''}${pedB-pedA} pedidos).` }); }
+    const cp=dp(cosA,cosB);
+    if (cp!==null) resumen.push({ icon:parseFloat(cp)<=0?'⏱':'⚠', c:dc(cosA,cosB), t:`Costo ${parseFloat(cp)<=0?'disminuyó':'aumentó'} ${cp}% ($${fmtM(Math.abs(cosB-cosA))} ${parseFloat(cp)<=0?'menos':'más'}). ${parseFloat(cp)<=0?'Recuperación positiva.':'Requiere atención.'}` });
+    const id=immB-immA;
+    if (immA>0||immB>0) resumen.push({ icon:'⚡', c:id>0?'#C0392B':'#1E8449', t:`${id>0?'Aumentaron':'Disminuyeron'} las entregas inmediatas pendientes: ${immA} → ${immB} (${id>=0?'+':''}${id}). ${id>0?'Prioridad máxima.':'Mejora registrada.'}` });
+    if (renA>0) {
+      const av=(((renA-renB)/renA)*100).toFixed(1);
+      const cerr=renA>renB?renA-renB:0;
+      resumen.push({ icon:'📋', c:parseFloat(av)>=50?'#1E8449':'#C0392B', t:`Avance: ${av}% de renglones cerrados (${fmt(cerr)}). Meta: superar 50%.` });
+    }
+    if (rengNuevos>rengCerrados) resumen.push({ icon:'⚠', c:'#C0392B', t:`Nuevos pedidos (${fmt(rengNuevos)}) superan a los cerrados (${fmt(rengCerrados)}). La carga neta aumentó.` });
+  }
+  if (immB>0) resumen.push({ icon:'🔧', c:'#C55A11', t:'Acción: validar inventario disponible y liberar renglones de entrega inmediata en las próximas 24h.' });
+
+  // ── Urgencia ────────────────────────────────────────────────
+  const urgencia = pedB>300?'CRÍTICO':pedB>100?'ALTO':pedB>30?'MEDIO':'BAJO';
+  const urgColor = pedB>300?'#C0392B':pedB>100?'#D4AC0D':pedB>30?'#1A5276':'#1E8449';
+
+  // ── Helpers inline ──────────────────────────────────────────
+  const H = '#1F3864', O = '#C55A11';
+  const thS = `padding:6px 9px;font-size:8.5pt;border:1px solid #BDC3C7;`;
+  const tdS = `padding:5px 8px;font-size:8.5pt;border:1px solid #BDC3C7;`;
+  function row(bg, ...cells) { return `<tr style="background:${bg};">${cells.join('')}</tr>`; }
+  function th(txt, extra='') { return `<th style="${thS}background:${H};color:#fff;${extra}">${txt}</th>`; }
+  function td(txt, extra='') { return `<td style="${tdS}${extra}">${txt}</td>`; }
+  function tdC(txt, extra='') { return `<td style="${tdS}text-align:center;${extra}">${txt}</td>`; }
+  function tdR(txt, extra='') { return `<td style="${tdS}text-align:right;${extra}">${txt}</td>`; }
+
+  // ====== HTML WORD ==========================================
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>
+@page { margin:1.8cm 2cm; }
+body { font-family:Calibri,Arial,sans-serif; font-size:10pt; color:#222; background:#fff; margin:0; padding:0; }
+h2 { font-size:11pt; color:${H}; font-weight:800; margin:14px 0 6px 0; border-bottom:2px solid ${O}; padding-bottom:3px; }
+p  { margin:3px 0; font-size:9.5pt; }
+table { border-collapse:collapse; width:100%; }
+</style></head>
+<body>
+
+<!-- ═══ CABECERA ═══════════════════════════════════════════ -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+  <td style="padding:10px 14px;vertical-align:middle;width:160px;">${getLogoTag(38)}</td>
+  <td style="padding:10px 14px;text-align:center;vertical-align:middle;">
+    <div style="font-size:14pt;font-weight:bold;color:${H};">Reporte de pickings pendientes (comparativo)</div>
+    <div style="font-size:9.5pt;color:#555;margin-top:3px;">
+      <strong>Centro: <span style="text-decoration:underline;">${centro}</span></strong>
+      &nbsp;&nbsp;
+      ${haComp
+        ? `Corte anterior <strong>${fechaA}</strong> vs Corte actual <strong>${fechaB}</strong>`
+        : `Corte actual <strong>${dateStr}</strong>`}
+    </div>
+  </td>
+</tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${O};height:3px;margin-bottom:10px;"><tr><td></td></tr></table>
+
+<!-- ═══ INDICADORES COMPARATIVOS DEL CENTRO ════════════════ -->
+<h2>■ Indicadores Comparativos del Centro</h2>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+<tr>
+  <!-- Tabla izquierda: KPIs -->
+  <td width="55%" style="vertical-align:top;padding-right:10px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr>
+      ${th('Indicador','text-align:left;min-width:140px;')}
+      ${haComp?th('⚪ Corte A','text-align:center;'):''}
+      ${th('⚫ Corte '+(haComp?'B':'Actual'),'text-align:center;')}
+      ${haComp?th('Variación','text-align:center;')+th('Tendencia','text-align:center;'):''}
+    </tr>
+    ${[
+      { l:'PEDIDOS PENDIENTES DE PICKING', a:pedA, b:pedB, fa:fmt, fb:fmt },
+      { l:'SKU\'S PENDIENTES',             a:renA, b:renB, fa:fmt, fb:fmt },
+      { l:'ZVA05VTAS',                     a:vtA,  b:vtB,  fa:fmt, fb:fmt },
+      { l:'KUMO ENTREGAS/VL06O',           a:kuA,  b:kuB,  fa:fmt, fb:fmt },
+      { l:'COSTO PENDIENTE',               a:cosA, b:cosB, fa:fmtM,fb:fmtM },
+    ].map((k,i)=>{
+      const bg = i%2===0?'#EBF5FB':'#fff';
+      const diff = k.b-k.a;
+      const pct  = k.a>0?((diff/k.a)*100).toFixed(1):null;
+      const varTxt = pct!==null?(parseFloat(pct)>=0?'+':'')+pct+'%':'—';
+      const varCol = diff<0?'#1E8449':diff>0?'#C0392B':'#555';
+      const tendTxt = diff===0?'= 0.0%':diff<0?`▼ ${varTxt}`:`▲ ${varTxt}`;
+      return row(bg,
+        td(k.l,'font-weight:600;font-size:8pt;text-transform:uppercase;letter-spacing:0.3px;'),
+        haComp?tdC(k.fa(k.a),'color:#1A5276;font-weight:bold;'):'',
+        tdC(k.fb(k.b),'color:#1A5276;font-weight:bold;'),
+        haComp?tdC(varTxt,`color:${varCol};font-weight:bold;`)+tdC(tendTxt,`color:${varCol};font-weight:bold;`):'',
+      );
+    }).join('')}
+    </table>
+  </td>
+  <!-- Tabla derecha: Plazo de Entrega -->
+  <td width="45%" style="vertical-align:top;padding-left:10px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr>
+      ${th('Plazo de Entrega','text-align:left;')}
+      ${haComp?th('⚪ Corte A','text-align:center;'):''}
+      ${th('⚫ Corte '+(haComp?'B':'Actual'),'text-align:center;')}
+      ${haComp?th('Δ','text-align:center;'):''}
+    </tr>
+    ${plazosOrd.map((p,i)=>{
+      const bg=i%2===0?'#EBF5FB':'#fff';
+      const cntB = plazoB[p]?.size||0;
+      const cntA = plazoSnapA[p]||0;
+      const diff = cntB-cntA;
+      const sym  = diff>0?`▲ ${diff}`:diff<0?`▼ ${Math.abs(diff)}`:'=';
+      const sc   = diff>0?'#C0392B':diff<0?'#1E8449':'#555';
+      const isPrio = PRIO.includes(p);
+      return row(bg,
+        td((isPrio?'⚡ ':'')+p, isPrio?`font-weight:700;color:${O};`:''),
+        haComp?tdC(fmt(cntA),'color:#1A5276;font-weight:bold;'):'',
+        tdC(fmt(cntB),'color:#1A5276;font-weight:bold;'),
+        haComp?tdC(sym,`color:${sc};font-weight:bold;`):'',
+      );
+    }).join('')}
+    </table>
+  </td>
+</tr>
+</table>
+
+${haComp && (renA>0||renB>0) ? `
+<!-- ═══ RENGLONES CERRADOS / NUEVOS ════════════════════════ -->
+<div style="margin-top:12px;">
+<table style="border-collapse:collapse;margin:0 auto;" cellpadding="0" cellspacing="0">
+<tr>
+  ${th('Reng.<br>Corte A','text-align:center;min-width:70px;')}
+  ${th('Reng.<br>Corte B','text-align:center;min-width:70px;')}
+  ${th('✅ Cerrados','text-align:center;min-width:80px;background:#1E8449 !important;')}
+  ${th('% Avance','text-align:center;min-width:70px;background:#1E8449 !important;')}
+  ${th('Permanecen','text-align:center;min-width:80px;')}
+  ${th('🆕 Nuevos','text-align:center;min-width:80px;background:#B8860B !important;')}
+  ${th('% Nuevos','text-align:center;min-width:70px;background:#B8860B !important;')}
+</tr>
+<tr style="background:#EBF5FB;">
+  ${tdC(fmt(renA),'font-weight:bold;')}
+  ${tdC(fmt(renB),'font-weight:bold;')}
+  ${tdC(fmt(rengCerrados),'font-weight:bold;color:#1E8449;')}
+  ${tdC(pctAvance+'%','font-weight:bold;color:#1E8449;')}
+  ${tdC(fmt(permanecen),'font-weight:bold;')}
+  ${tdC(fmt(rengNuevos),'font-weight:bold;color:#B8860B;')}
+  ${tdC(pctNuevos+'%','font-weight:bold;color:#B8860B;')}
+</tr>
+</table>
+</div>` : ''}
+
+<!-- ═══ TOP PEDIDOS POR COSTO ════════════════════════════════ -->
+${topPedidos.length>0?`
+<h2>■ Top ${Math.min(15,topPedidos.length)} Pedidos por Costo Pendiente</h2>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+<tr>
+  ${th('#','text-align:center;width:28px;')}
+  ${th('Número de Pedido','text-align:left;')}
+  ${th('Plazo de Entrega','text-align:left;')}
+  ${th('Renglones','text-align:center;')}
+  ${th('Cant. Pendiente','text-align:right;')}
+  ${th('Costo Venta Pend.','text-align:right;')}
+</tr>
+${topPedidos.map(([ped,d],i)=>{
+  const bg=i%2===0?'#EBF5FB':'#fff';
+  const rk=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'°';
+  return row(bg,
+    tdC(rk,'font-size:10pt;'),
+    td(ped,'font-weight:700;font-family:monospace;font-size:8pt;'),
+    td(d.plazo,'font-size:8pt;'),
+    tdC(fmt(d.renglones)),
+    tdR(fmt(d.cant)),
+    tdR('$'+fmtM(d.costo),'font-weight:bold;color:'+O+';'),
+  );
+}).join('')}
+</table>`:''}
+
+<!-- ═══ ACUERDOS Y COMPROMISOS ═══════════════════════════════ -->
+<h2>■ Acuerdos y Compromisos — ${centro}</h2>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:10px;">
+<tr>
+  <td style="background:${H};padding:8px 12px;color:#fff;font-size:11pt;font-weight:bold;width:70%;">${centro}</td>
+  <td style="background:${urgColor};padding:8px 12px;color:#fff;font-size:10pt;font-weight:bold;text-align:center;width:30%;">${urgencia}</td>
+</tr>
+<tr>
+  <td colspan="2" style="padding:8px 12px;">
+    <table width="100%" cellpadding="4" cellspacing="4" style="border-collapse:separate;">
+    <tr>
+      <td style="background:#EBF5FB;border-radius:4px;text-align:center;padding:6px 10px;">
+        <div style="font-size:7.5pt;color:#555;text-transform:uppercase;">Pedidos</div>
+        <div style="font-size:13pt;font-weight:bold;color:${H};">${fmt(acd.pedidos)}</div>
+      </td>
+      <td style="background:#EBF5FB;border-radius:4px;text-align:center;padding:6px 10px;">
+        <div style="font-size:7.5pt;color:#555;text-transform:uppercase;">Costo</div>
+        <div style="font-size:11pt;font-weight:bold;color:${H};">$${fmtM(acd.costo)}</div>
+      </td>
+      <td style="background:#EBF5FB;border-radius:4px;text-align:center;padding:6px 10px;">
+        <div style="font-size:7.5pt;color:#555;text-transform:uppercase;">Inmediatas</div>
+        <div style="font-size:13pt;font-weight:bold;color:${acd.inmediata>0?'#C0392B':H};">${fmt(acd.inmediata)}</div>
+      </td>
+      <td style="background:#EBF5FB;border-radius:4px;text-align:center;padding:6px 10px;">
+        <div style="font-size:7.5pt;color:#555;text-transform:uppercase;">Renglones</div>
+        <div style="font-size:13pt;font-weight:bold;color:${H};">${fmt(acd.renglones)}</div>
+      </td>
+    </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+  <td colspan="2" style="padding:6px 12px 12px;">
+    ${acuerdosList.map(a=>`<p style="margin:4px 0;font-size:9.5pt;color:#333;padding-left:10px;border-left:3px solid ${O};">▸ ${a}</p>`).join('')}
+  </td>
+</tr>
+</table>
+
+<!-- ═══ RESUMEN GENERAL ══════════════════════════════════════ -->
+<h2>■ Resumen general — ${centro}</h2>
+<div style="border-left:4px solid ${O};padding:4px 12px;margin-bottom:14px;">
+${resumen.length>0
+  ? resumen.map(r=>`<p style="margin:5px 0;font-size:9.5pt;"><span style="color:${r.c};font-weight:bold;">${r.icon}</span>&nbsp;${r.t}</p>`).join('')
+  : `<p style="font-size:9.5pt;color:#555;">Corte actual: ${fmt(pedB)} pedidos únicos · ${fmt(renB)} renglones · $${fmtM(cosB)} costo pendiente.</p>`}
+<p style="margin-top:8px;font-size:9pt;color:#555;">Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa raíz del problema.</p>
+</div>
+
+<!-- PIE -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${H};margin-top:20px;">
+<tr>
+  <td style="padding:8px 18px;color:#BDC3C7;font-size:8pt;text-align:center;">
+    Generado automáticamente — Dashboard Picking Pendiente GK &nbsp;·&nbsp; ${dateStr} &nbsp;·&nbsp; Francisco Javier Cerezo Ramos
+  </td>
+</tr>
+</table>
+
+</body></html>`;
+}
+
+// ============================================================
+//  FIN — Informes por Centro
+// ============================================================
+
 window.addEventListener('DOMContentLoaded', () => {
   // Mostrar tabs-nav solo si ya hay cargas guardadas
   const cargas = lsGetAllCargas();
