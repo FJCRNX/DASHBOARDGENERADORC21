@@ -378,6 +378,7 @@
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <div class="badge-date" id="badge-date">Sin datos cargados</div>
+    <div id="sb-status-badge" title="Estado de conexión a la base de datos" style="font-size:10px;padding:3px 8px;border-radius:10px;background:#FFF3CD;color:#856404;border:1px solid #FFE69C;white-space:nowrap;">⏳ Conectando...</div>
     <label title="Logo para informes Word — acepta imagen local o URL" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
       <span style="font-size:11px;color:var(--text2);white-space:nowrap;">🖼 Logo:</span>
       <input type="file" id="logo-file-input" accept="image/*" style="font-size:11px;max-width:180px;" onchange="onLogoFileChange(this)">
@@ -812,11 +813,61 @@ let RAW = [], FILTERED = [], charts = {}, compCharts = {};
 let CURRENT_FILENAME = '';
 let PENDING_DELETE_KEY = null;
 
-// ===== LOCALSTORAGE KEYS =====
-const LS_PREFIX = 'gk_picking_carga_';
+// ===== SUPABASE: HISTORIAL DE CARGAS =====
+const SUPABASE_URL = 'https://ozhdimgoedweduggqrtg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aGRpbWdvZWR3ZWR1Z2dxcnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MTYwNzQsImV4cCI6MjA5NzM5MjA3NH0.VPSIU_HIdQoMyMp9Ty2GWH4lOxybeTPNtjKtqvUIoIw';
+const SB_TABLE = 'cargas_picking';
+const LS_PREFIX = 'gk_picking_carga_'; // fallback offline (legado)
 const LS_MAX = 20;
 
+// Caché en memoria — se llena desde Supabase al cargar la página
+// y se mantiene sincronizado para que las funciones de UI sigan siendo síncronas.
+let _CARGAS_CACHE = [];
+let _SB_ONLINE = true; // se pone en false si falla la conexión, y se usa localStorage como respaldo
+
+function sbHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+  };
+}
+
+// Carga inicial desde Supabase (se llama una vez al iniciar la página)
+async function sbCargarHistorialInicial() {
+  const badge = document.getElementById('sb-status-badge');
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?select=key,ts,filename,data&order=ts.desc&limit=${LS_MAX}`, {
+      headers: sbHeaders()
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = await resp.json();
+    _CARGAS_CACHE = rows.map(r => ({ key: r.key, ts: r.ts, filename: r.filename, ...r.data }));
+    _SB_ONLINE = true;
+    if (badge) {
+      badge.textContent = '☁️ Supabase conectado';
+      badge.style.background = '#D4EDDA'; badge.style.color = '#155724'; badge.style.borderColor = '#C3E6CB';
+    }
+  } catch (e) {
+    console.warn('Supabase no disponible, usando localStorage como respaldo:', e.message);
+    _SB_ONLINE = false;
+    _CARGAS_CACHE = lsGetAllCargasLocal();
+    if (badge) {
+      badge.textContent = '💾 Modo local (sin conexión)';
+      badge.style.background = '#F8D7DA'; badge.style.color = '#721C24'; badge.style.borderColor = '#F5C6CB';
+    }
+  }
+  renderHistorial();
+  populateCompSelects();
+}
+
+// Lee SIEMPRE del caché en memoria (síncrono) — ya sincronizado con Supabase o localStorage
 function lsGetAllCargas() {
+  return [..._CARGAS_CACHE].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+}
+
+// Respaldo: lee directamente de localStorage (legado / modo offline)
+function lsGetAllCargasLocal() {
   const cargas = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -830,31 +881,70 @@ function lsGetAllCargas() {
   return cargas.sort((a, b) => b.ts - a.ts);
 }
 
-function lsSaveCarga(data) {
-  const ts = Date.now();
-  const key = LS_PREFIX + ts;
-  // Verificar limite de 20 cargas
-  const cargas = lsGetAllCargas();
-  if (cargas.length >= LS_MAX) {
-    // Eliminar la más antigua
-    const oldest = cargas[cargas.length - 1];
-    localStorage.removeItem(oldest.key);
-  }
-  // Guardar datos comprimidos (solo campos clave, no todos los renglones)
+async function lsSaveCarga(data) {
+  const tsMs = Date.now();
+  const tsIso = new Date(tsMs).toISOString();
+  const key = LS_PREFIX + tsMs;
   const snapshot = buildSnapshot(data);
-  try {
-    localStorage.setItem(key, JSON.stringify({ ts, filename: CURRENT_FILENAME, ...snapshot }));
-    showToast('✅ Carga guardada en historial');
-  } catch(e) {
-    showToast('⚠️ Sin espacio en localStorage para guardar esta carga');
+  const cargaObj = { ts: tsIso, filename: CURRENT_FILENAME, ...snapshot };
+
+  // Actualizar caché en memoria de inmediato (UI optimista)
+  _CARGAS_CACHE.unshift({ key, ...cargaObj });
+  if (_CARGAS_CACHE.length > LS_MAX) {
+    const removed = _CARGAS_CACHE.pop();
+    if (_SB_ONLINE) sbDeleteCargaRemote(removed.key);
+    else localStorage.removeItem(removed.key);
+  }
+
+  if (_SB_ONLINE) {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}`, {
+        method: 'POST',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ key, ts: tsIso, filename: CURRENT_FILENAME, data: snapshot }),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      showToast('✅ Carga guardada en Supabase (nube)');
+    } catch (e) {
+      console.warn('Error guardando en Supabase, usando localStorage:', e.message);
+      _SB_ONLINE = false;
+      try {
+        localStorage.setItem(key, JSON.stringify(cargaObj));
+        showToast('⚠️ Sin conexión a Supabase — guardado solo localmente');
+      } catch(e2) {
+        showToast('⚠️ Sin espacio para guardar esta carga');
+      }
+    }
+  } else {
+    try {
+      localStorage.setItem(key, JSON.stringify(cargaObj));
+      showToast('💾 Carga guardada localmente (sin conexión a Supabase)');
+    } catch(e) {
+      showToast('⚠️ Sin espacio en localStorage para guardar esta carga');
+    }
   }
 }
 
+async function sbDeleteCargaRemote(key) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?key=eq.${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+      headers: sbHeaders(),
+    });
+  } catch(e) { console.warn('Error eliminando de Supabase:', e.message); }
+}
+
 function lsDeleteCarga(key) {
-  localStorage.removeItem(key);
+  // Actualizar caché de inmediato
+  _CARGAS_CACHE = _CARGAS_CACHE.filter(c => c.key !== key);
   renderHistorial();
-  // Actualizar selectores de comparación
   populateCompSelects();
+
+  if (_SB_ONLINE) {
+    sbDeleteCargaRemote(key);
+  } else {
+    localStorage.removeItem(key);
+  }
 }
 
 // ===== SNAPSHOT: datos resumen para guardar en localStorage =====
@@ -5752,13 +5842,12 @@ ${resumen.length>0
 //  FIN — Informes por Centro
 // ============================================================
 
-window.addEventListener('DOMContentLoaded', () => {
-  // Mostrar tabs-nav solo si ya hay cargas guardadas
+window.addEventListener('DOMContentLoaded', async () => {
+  // Cargar historial desde Supabase (con respaldo a localStorage si falla)
+  await sbCargarHistorialInicial();
   const cargas = lsGetAllCargas();
   if (cargas.length > 0) {
     document.getElementById('tabs-nav').style.display = 'flex';
-    renderHistorial();
-    populateCompSelects();
   }
   // Asegurar que la pestaña Analizador es la activa al inicio si no hay datos
   // (handleFile cambia a 'dashboard-tab' después de cargar)
@@ -5769,3 +5858,4 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
