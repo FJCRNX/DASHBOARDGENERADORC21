@@ -320,9 +320,218 @@
   .anz-fg label { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
   .anz-fg input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); background: #fff; min-width: 160px; }
 
+  /* ===== LOGIN OVERLAY ===== */
+  #login-overlay{position:fixed;inset:0;z-index:9999;display:flex;justify-content:center;align-items:center;
+    background:radial-gradient(circle at 50% 0%,#111a30 0%,#050810 80%);font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
+  #login-overlay.hidden{display:none;}
+  .matrix-bg{position:absolute;inset:0;z-index:1;opacity:.15;pointer-events:none;user-select:none;
+    -webkit-mask-image:linear-gradient(to bottom,transparent,#000 15%,#000 85%,transparent);
+    mask-image:linear-gradient(to bottom,transparent,#000 15%,#000 85%,transparent);}
+  .matrix-column{position:absolute;display:flex;flex-direction:column;font-size:14px;font-weight:600;letter-spacing:1px;white-space:nowrap;top:-150px;}
+  .matrix-column:nth-child(1){left:8%;color:#00e5ff;animation:fall 4s linear infinite;}
+  .matrix-column:nth-child(2){left:25%;color:#2979ff;animation:fall 6s linear infinite;animation-delay:1s;}
+  .matrix-column:nth-child(3){left:45%;color:#00e5ff;animation:fall 5s linear infinite;animation-delay:2.5s;opacity:.6;}
+  .matrix-column:nth-child(4){right:35%;color:#2979ff;animation:fall 4.5s linear infinite;animation-delay:.5s;}
+  .matrix-column:nth-child(5){right:15%;color:#00e5ff;animation:fall 7s linear infinite;animation-delay:1.5s;opacity:.7;}
+  .matrix-column:nth-child(6){right:5%;color:#2979ff;animation:fall 5.5s linear infinite;animation-delay:3s;}
+  @keyframes fall{0%{transform:translateY(-50px);}100%{transform:translateY(110vh);}}
+  .matrix-column span{margin:18px 0;text-shadow:0 0 8px currentColor;}
+  .login-container{width:400px;max-width:90vw;background:rgba(16,23,41,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    padding:40px 35px;border-radius:28px;box-shadow:0 30px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);
+    position:relative;z-index:10;border:1px solid rgba(255,255,255,.08);color:#fff;}
+  .login-container h2{margin:0 0 8px;font-size:26px;font-weight:700;letter-spacing:-.5px;text-align:center;}
+  .login-container p.subtitle{margin:0 0 30px;font-size:14px;color:#8b9bb4;font-weight:300;text-align:center;}
+  .login-container p.subtitle span{background:linear-gradient(90deg,#00e5ff,#2979ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;}
+  .bear-wrapper{width:140px;height:130px;margin:0 auto 25px;position:relative;}
+  .bear-ear{position:absolute;width:44px;height:44px;background:#9c8061;border-radius:50%;top:2px;z-index:1;box-shadow:inset 0 -4px 0 rgba(0,0,0,.15);}
+  .bear-ear.left{left:4px;} .bear-ear.right{right:4px;}
+  .bear-ear::after{content:'';position:absolute;width:24px;height:24px;background:#ffa089;border-radius:50%;top:10px;left:10px;box-shadow:inset 0 2px 4px rgba(0,0,0,.1);}
+  .bear-head{width:114px;height:114px;background:#9c8061;border-radius:50%;position:absolute;bottom:0;left:13px;z-index:2;
+    box-shadow:inset -4px -8px 12px rgba(0,0,0,.15),0 10px 25px rgba(0,0,0,.4);overflow:hidden;}
+  .face-elements{position:relative;top:15px;transition:transform .3s cubic-bezier(.25,1,.5,1);}
+  .eye{position:absolute;width:18px;height:18px;background:#0f1522;border-radius:50%;transition:all .2s ease;}
+  .eye.left{left:26px;} .eye.right{right:26px;}
+  .eye::before{content:'';position:absolute;width:6px;height:6px;background:#fff;border-radius:50%;top:3px;left:3px;box-shadow:0 0 4px rgba(255,255,255,.8);}
+  .blush{position:absolute;width:14px;height:8px;background:#ff7575;border-radius:50%;opacity:.5;top:18px;filter:blur(1px);}
+  .blush.left{left:14px;} .blush.right{right:14px;}
+  .muzzle{position:absolute;width:42px;height:32px;background:#e6dcd8;border-radius:50%;top:14px;left:50%;transform:translateX(-50%);box-shadow:0 4px 8px rgba(0,0,0,.05);}
+  .muzzle::before{content:'';position:absolute;width:14px;height:9px;background:#2a1a10;border-radius:50% 50% 40% 40%;top:5px;left:50%;transform:translateX(-50%);}
+  .hands{position:relative;}
+  .hand{position:absolute;width:30px;height:30px;background:#9c8061;border-radius:50% 50% 50% 0;bottom:-4px;transition:transform .35s cubic-bezier(.25,1,.5,1);box-shadow:inset 0 -2px 0 rgba(0,0,0,.1);}
+  .hand:nth-child(1){left:6px;transform:rotate(15deg);} .hand:nth-child(2){right:6px;transform:rotate(-15deg) scaleX(-1);}
+  .bear-wrapper.covered .hand{transform:translateY(-48px);box-shadow:inset 0 4px 0 rgba(255,255,255,.05),0 15px 20px rgba(0,0,0,.5);}
+  .bear-wrapper.covered .eye{height:2px;top:22px;background:#0f1522;}
+  .bear-wrapper.covered .eye::before{display:none;}
+  .bear-wrapper.typing .face-elements{transform:translateY(4px);}
+  .login-input-group{position:relative;margin-bottom:18px;}
+  .login-input-group input{width:100%;padding:16px 20px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:14px;
+    outline:none;font-size:15px;font-family:'Inter',sans-serif;color:#fff;box-sizing:border-box;transition:all .3s cubic-bezier(.25,1,.5,1);box-shadow:inset 0 2px 4px rgba(0,0,0,.2);}
+  .login-input-group input::placeholder{color:#5c6a82;font-weight:300;}
+  .login-input-group input:focus{background:rgba(0,0,0,.4);border-color:#00e5ff;box-shadow:inset 0 2px 4px rgba(0,0,0,.2),0 0 0 3px rgba(0,229,255,.15);}
+  .login-password-wrap{position:relative;height:52px;}
+  .login-password-wrap input{position:absolute;top:0;left:0;width:100%;}
+  #login-pass-visible{display:none;}
+  #login-reveal:checked ~ .login-password-wrap #login-pass{display:none;}
+  #login-reveal:checked ~ .login-password-wrap #login-pass-visible{display:block;}
+  .show-pass-label{display:inline-flex;align-items:center;gap:10px;margin:0 0 22px;font-size:13px;color:#8b9bb4;cursor:pointer;user-select:none;font-weight:400;transition:color .3s;}
+  .show-pass-label:hover{color:#fff;}
+  .custom-checkbox{width:18px;height:18px;border:1px solid #5c6a82;border-radius:4px;display:flex;justify-content:center;align-items:center;transition:all .3s;}
+  #login-reveal:checked ~ .show-pass-label .custom-checkbox{background:#00e5ff;border-color:#00e5ff;}
+  #login-reveal:checked ~ .show-pass-label .custom-checkbox::after{content:'✓';color:#000;font-size:12px;font-weight:bold;}
+  #login-form button{width:100%;padding:16px;background:linear-gradient(135deg,#00e5ff,#2979ff);border:none;color:#fff;font-size:16px;font-weight:600;
+    letter-spacing:.5px;border-radius:14px;cursor:pointer;box-shadow:0 10px 25px rgba(0,229,255,.3);transition:all .3s cubic-bezier(.25,1,.5,1);font-family:'Inter',sans-serif;}
+  #login-form button:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(41,121,255,.45);}
+  #login-form button:active{transform:translateY(1px);box-shadow:0 5px 15px rgba(41,121,255,.3);}
+  #login-form button:disabled{opacity:.6;cursor:wait;transform:none;}
+  #login-error{min-height:18px;text-align:center;font-size:12.5px;color:#ff6b6b;margin-top:-6px;margin-bottom:10px;}
 </style>
 </head>
 <body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="login-overlay">
+  <div class="matrix-bg">
+    <div class="matrix-column"><span>Pickings</span><span>Logistica</span><span>Traspasos</span><span>Kuroda</span><span>Analisis</span></div>
+    <div class="matrix-column"><span>Analisis</span><span>Kuroda</span><span>Pickings</span><span>Compras</span><span>Logistica</span></div>
+    <div class="matrix-column"><span>Compras</span><span>Pickings</span><span>Analisis</span><span>Traspasos</span><span>Kuroda</span></div>
+    <div class="matrix-column"><span>Kuroda</span><span>Analisis</span><span>Logistica</span><span>Pickings</span><span>Compras</span></div>
+    <div class="matrix-column"><span>Logistica</span><span>Traspasos</span><span>Kuroda</span><span>Analisis</span><span>Pickings</span></div>
+    <div class="matrix-column"><span>Traspasos</span><span>Logistica</span><span>Compras</span><span>Kuroda</span><span>Analisis</span></div>
+  </div>
+
+  <div class="login-container">
+    <input type="checkbox" id="login-reveal" style="display:none;">
+
+    <div class="bear-wrapper" id="login-bear">
+      <div class="bear-ear left"></div>
+      <div class="bear-ear right"></div>
+      <div class="bear-head">
+        <div class="face-elements">
+          <div class="blush left"></div>
+          <div class="blush right"></div>
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="muzzle"></div>
+        </div>
+        <div class="hands">
+          <div class="hand"></div>
+          <div class="hand"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-text">
+      <h2>Acceso Seguro</h2>
+      <p class="subtitle">Dashboard Picking Pendiente <span>GK</span></p>
+    </div>
+
+    <div id="login-form">
+      <div class="login-input-group">
+        <input type="text" id="login-user" placeholder="Usuario del sistema" autocomplete="off">
+      </div>
+      <div class="login-input-group login-password-wrap">
+        <input type="password" id="login-pass" placeholder="Contraseña de acceso" autocomplete="off">
+        <input type="text" id="login-pass-visible" placeholder="Contraseña de acceso">
+      </div>
+      <label for="login-reveal" class="show-pass-label">
+        <div class="custom-checkbox"></div>
+        Mostrar contraseña
+      </label>
+      <div id="login-error"></div>
+      <button type="button" id="login-btn" onclick="loginSubmit()">Iniciar sesión</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== AUTENTICACIÓN — CSV remoto =====
+  const AUTH_CSV_URL = 'https://raw.githubusercontent.com/FJCRNX/CHATIABETA/refs/heads/main/PASSWORDS.csv';
+  let AUTH_USERS = null;
+  let AUTH_OK = false; // vive solo en memoria, sin storage local
+
+  function parseUsersCSV(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const users = {};
+    lines.forEach(line => {
+      // separador real: uno o más espacios/tabs (también admite coma o ; por si cambia el formato)
+      const parts = line.split(/[,;\t]+|\s{1,}/).filter(Boolean);
+      const u = (parts[0] || '').trim();
+      const p = (parts[1] || '').trim();
+      if (!u) return;
+      if (u.toLowerCase() === 'usuario' || u.toLowerCase() === 'user') return; // encabezado
+      users[u.toLowerCase()] = p;
+    });
+    return users;
+  }
+
+  async function loadAuthUsers() {
+    const res = await fetch(AUTH_CSV_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('No se pudo leer el CSV de usuarios');
+    return parseUsersCSV(await res.text());
+  }
+
+  function showAppContent() {
+    document.getElementById('login-overlay').classList.add('hidden');
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    // Bloqueo de clic derecho una vez logueado
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  async function loginSubmit() {
+    const btn = document.getElementById('login-btn');
+    const errBox = document.getElementById('login-error');
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    errBox.textContent = '';
+    if (!user || !pass) { errBox.textContent = 'Ingresa usuario y contraseña.'; return; }
+    btn.disabled = true; btn.textContent = 'Verificando...';
+    try {
+      if (!AUTH_USERS) AUTH_USERS = await loadAuthUsers();
+      const real = AUTH_USERS[user.toLowerCase()];
+      if (real !== undefined && real === pass) {
+        AUTH_OK = true;
+        showAppContent();
+      } else {
+        errBox.textContent = 'Usuario o contraseña incorrectos.';
+      }
+    } catch (e) {
+      errBox.textContent = 'No se pudo validar el acceso. Verifica tu conexión.';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Iniciar sesión';
+    }
+  }
+
+  (function () {
+    const bear = document.getElementById('login-bear');
+    const userInp = document.getElementById('login-user');
+    const passHidden = document.getElementById('login-pass');
+    const passVisible = document.getElementById('login-pass-visible');
+    const revealCb = document.getElementById('login-reveal');
+
+    passHidden.addEventListener('input', () => passVisible.value = passHidden.value);
+    passVisible.addEventListener('input', () => passHidden.value = passVisible.value);
+
+    function updateBearState() {
+      const passIsHidden = !revealCb.checked;
+      const hasFocus = document.activeElement === passHidden || document.activeElement === passVisible;
+      bear.classList.toggle('covered', passIsHidden && hasFocus);
+    }
+    [passHidden, passVisible].forEach(el => {
+      el.addEventListener('focus', updateBearState);
+      el.addEventListener('blur', updateBearState);
+    });
+    revealCb.addEventListener('change', updateBearState);
+    userInp.addEventListener('focus', () => bear.classList.add('typing'));
+    userInp.addEventListener('blur', () => bear.classList.remove('typing'));
+
+    [userInp, passHidden, passVisible].forEach(el => {
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); loginSubmit(); }
+      });
+    });
+  })();
+</script>
 
 <div id="toast">✓ Copiado al portapapeles</div>
 
