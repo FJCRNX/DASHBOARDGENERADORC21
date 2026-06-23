@@ -1242,7 +1242,10 @@ function buildSnapshot(rows) {
     if (!orgData[c]) orgData[c] = col(r,'Organizacion de Ventas') || '';
   });
 
-  return { totalPedidos, totalRenglones, totalCosto, totalCantidad, centros, kumo, vtas, centroData, orgSummary, orgData, pedidoCodigoList };
+  // rawRows: copia COMPLETA y exacta de las filas originales (espejo fiel en Supabase).
+  // Se guarda además del resumen agregado para que el Analizador y la descarga de Excel
+  // trabajen siempre con los datos reales, no con una reconstrucción aproximada.
+  return { totalPedidos, totalRenglones, totalCosto, totalCantidad, centros, kumo, vtas, centroData, orgSummary, orgData, pedidoCodigoList, rawRows: rows };
 }
 
 // ===== TOAST =====
@@ -2090,6 +2093,27 @@ function col(row, name) {
   return k ? (row[k] ?? '') : '';
 }
 
+// Busca un valor probando varios posibles nombres de columna (encabezados que
+// pueden variar según la exportación SAP). Usado para campos que no tienen un
+// nombre de encabezado 100% estandarizado, como el nombre del vendedor.
+function colAny(row, names) {
+  const keys = Object.keys(row);
+  for (const name of names) {
+    const k = keys.find(k => k.trim().toLowerCase() === name.trim().toLowerCase());
+    if (k && row[k] !== '' && row[k] != null) return row[k];
+  }
+  return '';
+}
+
+const VENDEDOR_HEADERS = [
+  'Nombre del Vendedor', 'Nombre Vendedor', 'Vendedor', 'Nombre de Vendedor',
+  'Empleado de Ventas', 'Nombre Empleado de Ventas', 'Salesperson', 'Salesperson Name',
+  'Nombre del Empleado', 'Agente de Ventas', 'Nombre Agente de Ventas'
+];
+function getVendedor(row) {
+  return colAny(row, VENDEDOR_HEADERS);
+}
+
 function populateFilters() {
   const orgs = [...new Set(RAW.map(r => col(r,'Organizacion de Ventas')))].filter(Boolean).sort();
   const centros = [...new Set(RAW.map(r => col(r,'Centro')))].filter(Boolean).sort();
@@ -2881,6 +2905,30 @@ function loadCargaIntoDashboard(key) {
   const carga = cargas.find(c => c.key === key);
   if (!carga || !carga.centroData) { showToast('⚠️ No se encontraron datos para esta carga'); return; }
 
+  // ESPEJO REAL: si la carga guardó las filas originales completas (rawRows), úsalas
+  // directamente. Esto es lo que permite que el Analizador extraiga y exporte los
+  // datos correctos (incluyendo columnas como Vendedor) en vez de datos aproximados.
+  if (Array.isArray(carga.rawRows) && carga.rawRows.length > 0) {
+    RAW = carga.rawRows.map(r => ({ ...r }));
+    FILTERED = [...RAW];
+    CURRENT_FILENAME = carga.filename || 'Carga histórica';
+
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('top-bar').style.display = 'flex';
+    document.getElementById('tabs-nav').style.display = 'flex';
+    document.getElementById('dashboard-tab').querySelector('#dashboard').style.display = 'block';
+    document.getElementById('file-label').textContent = CURRENT_FILENAME;
+    document.getElementById('badge-date').textContent = 'Datos cargados: ' + new Date(carga.ts).toLocaleDateString('es-MX');
+    populateFilters();
+    renderAll();
+    anzAllRows = [];
+    switchTab('dashboard-tab');
+    showToast('✅ Carga restaurada (datos completos)');
+    return;
+  }
+
+  // --- LEGADO: cargas antiguas guardadas antes de mirror, solo tienen el resumen.
+  // Se reconstruye una aproximación sintética únicamente para no romper el historial previo.
   // Reconstruir RAW sintético desde el snapshot centroData.
   // El snapshot guarda por centro:
   //   pedidos   = pedidos únicos (Set.size)
@@ -5427,6 +5475,7 @@ const ANZ_COLS_EXPORT = [
   { k: 'Numero de Renglon', w: 8 },
   { k: 'Codigo de Material', w: 15 },
   { k: 'Descripcion del Material', w: 36 },
+  { k: 'Nombre del Vendedor', w: 22 },
   { k: 'Plazo de Entrega', w: 22 },
   { k: 'Fecha de Registro', w: 13 },
   { k: 'Cantidad Vendida', w: 11 },
@@ -5493,6 +5542,7 @@ function anzBuildWorkbook(centrosEnGrupo) {
         anzNumCell(r['Numero de Renglon'], fill, font),
         anzStrCell(r['Codigo de Material'] || r['Codigo'] || r['Material'], fill, font),
         anzStrCell(r['Descripcion del Material'], fill, font),
+        anzStrCell(getVendedor(r), fill, font),
         anzStrCell(r['Plazo de Entrega'], fill, font),
         anzStrCell(anzFmtDate(r['Fecha de Registro'], r['Centro']), fill, font),
         anzNumCell(r['Cantidad Vendida'], fill, font),
