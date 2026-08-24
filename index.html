@@ -5193,19 +5193,52 @@ function anzFmtDate(d, centro) {
 // ============================================================
 //  MOTOR DE ACCIONES POR PLAZO DE ENTREGA
 // ============================================================
+// Validación en cascada: 1) Cantidad Propia (existencia) — indica si cubre o no
+// el pendiente; 2) si no hay existencia o no cubre todo, valida Orden de Compra
+// y Solicitud de Traspaso (cada una por separado) e indica si alguna de las 2
+// tiene cantidad suficiente para cubrir el pendiente.
+function anzCoberturaExistencia(r) {
+  const propia = +r['Cantidad Propia'] || 0;
+  const pend = +r['Cantidad Pendiente'] || 0;
+  const msgs = [];
+  if (propia > 0) {
+    if (propia >= pend) {
+      msgs.push(`Cantidad propia disponible: ${anzFmt(propia)} ✓ cubre pendiente (${anzFmt(pend)})`);
+      return { estado: 'OK', comentario: msgs.join(' | ') };
+    }
+    msgs.push(`Cantidad propia disponible: ${anzFmt(propia)} ✗ NO cubre todo el pendiente (${anzFmt(pend)})`);
+  } else {
+    msgs.push('Sin existencia propia (Cantidad Propia = 0)');
+  }
+  const oc = +r['Orden de Compra'] || 0;
+  const traspaso = +r['Solicitud de Traspaso'] || 0;
+  const ocCubre = oc > 0 && oc >= pend;
+  const traspasoCubre = traspaso > 0 && traspaso >= pend;
+  if (ocCubre || traspasoCubre) {
+    const partes = [];
+    if (ocCubre) partes.push(`OC (${anzFmt(oc)}) ✓ cubre pendiente`);
+    if (traspasoCubre) partes.push(`Traspaso (${anzFmt(traspaso)}) ✓ cubre pendiente`);
+    msgs.push(partes.join(' | '));
+    return { estado: 'OK', comentario: msgs.join(' | ') };
+  }
+  msgs.push(`Sin OC ni Traspaso con cantidad suficiente para cubrir pendiente (${anzFmt(pend)})`);
+  return { estado: 'ALERTA', comentario: msgs.join(' | ') };
+}
 const ANZ_ACCIONES = {
   'OCURRE': (r, rd) => {
+    const cob = anzCoberturaExistencia(r);
     const propia = +r['Cantidad Propia'] || 0;
-    const traspaso = +r['Solicitud de Traspaso'] || 0;
-    const pend = +r['Cantidad Pendiente'] || 0;
-    const msgs = []; let estado = 'OK';
-    if (propia > 0) msgs.push(`Existencia propia: ${anzFmt(propia)}`);
-    if (traspaso > 0) {
-      if (traspaso >= pend) msgs.push(`Traspaso activo: ${anzFmt(traspaso)} ✓ cubre pendiente`);
-      else { msgs.push(`Traspaso activo: ${anzFmt(traspaso)} ✗ NO cubre pendiente (${anzFmt(pend)})`); estado = 'ALERTA'; }
+    if (propia > 0) {
+      const fechaReg = anzParseDate(r['Fecha de Registro']);
+      if (fechaReg) {
+        const tz = anzGetTz(r['Centro']);
+        const dias = anzCalendarDays(fechaReg, rd, tz);
+        if (dias > 0) {
+          return { estado: 'ALERTA', comentario: `${cob.comentario} | ⚠ Tiene existencia propia pero no fue entregado el mismo día de la fecha de registro (han pasado ${dias} día(s)) — ¿Por qué no se entregó?` };
+        }
+      }
     }
-    if (!propia && !traspaso) { msgs.push('Sin existencia propia ni traspaso activo'); estado = 'ALERTA'; }
-    return { estado, comentario: msgs.join(' | ') };
+    return cob;
   },
   'ENVIO A DOMICILIO': (r, rd) => {
     const fechaReg = anzParseDate(r['Fecha de Registro']);
@@ -5229,7 +5262,13 @@ const ANZ_ACCIONES = {
     msgs.push(propia > 0 ? `Cantidad propia disponible: ${anzFmt(propia)}` : 'Sin cantidad propia');
     return { estado: dias > 1 ? 'ALERTA' : 'INFO', comentario: msgs.join(' | ') };
   },
-  'PIDE Y RECOGE': () => ({ estado: 'N/A', comentario: 'Sin comentarios' }),
+  'PIDE Y RECOGE': (r) => {
+    const cob = anzCoberturaExistencia(r);
+    if (cob.estado === 'ALERTA') {
+      return { estado: 'ALERTA', comentario: `${cob.comentario} | Validar cómo surtir al cliente` };
+    }
+    return cob;
+  },
   'APARTADOS': (r, rd) => {
     const fechaReg = anzParseDate(r['Fecha de Registro']);
     if (!fechaReg) return { estado: 'INFO', comentario: 'Fecha de registro no disponible' };
@@ -5247,7 +5286,15 @@ const ANZ_ACCIONES = {
     if (oc >= pend) return { estado: 'INFO', comentario: `OC (${anzFmt(oc)}) cubre pendiente (${anzFmt(pend)}) — no cubre vendida (${anzFmt(vend)})` };
     return { estado: 'ALERTA', comentario: `OC (${anzFmt(oc)}) NO cubre vendida (${anzFmt(vend)}) ni pendiente (${anzFmt(pend)})` };
   },
-  'CONTRA ENTREGA (COD)': () => ({ estado: 'INFO', comentario: 'Validar si el plazo de entrega es correcto para este renglón' }),
+  'CONTRA ENTREGA (COD)': (r, rd) => {
+    const fechaReg = anzParseDate(r['Fecha de Registro']);
+    if (!fechaReg) return { estado: 'INFO', comentario: 'Fecha de registro no disponible — validar si el plazo de entrega es correcto para este renglón' };
+    const tz = anzGetTz(r['Centro']);
+    const dias = anzCalendarDays(fechaReg, rd, tz);
+    if (dias <= 0) return { estado: 'INFO', comentario: 'Validar si el plazo de entrega es correcto para este renglón' };
+    const cob = anzCoberturaExistencia(r);
+    return { estado: cob.estado, comentario: `${cob.comentario} | Actualiza el plazo de entrega correcto` };
+  },
   'CTE RECO EN OTRA SUC': (r) => {
     const traspaso = +r['Solicitud de Traspaso'] || 0;
     const pend = +r['Cantidad Pendiente'] || 0;
@@ -6139,4 +6186,5 @@ window.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
+
 
