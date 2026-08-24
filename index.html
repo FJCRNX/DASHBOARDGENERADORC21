@@ -1046,12 +1046,34 @@ function sbHeaders() {
 async function sbCargarHistorialInicial() {
   const badge = document.getElementById('sb-status-badge');
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?select=key,ts,filename,data&order=ts.desc&limit=${LS_MAX}`, {
+    // IMPORTANTE: ya NO se trae la columna "data" completa (incluye rawRows,
+    // el espejo íntegro del Excel, que puede pesar varios MB por carga).
+    // Traer eso × 20 cargas en un compute Nano era la causa del timeout (57014)
+    // / error 500 al abrir el dashboard. Aquí solo se piden los campos ligeros
+    // que usan el historial y los filtros de comparación. "rawRows" se pide
+    // aparte, una sola carga a la vez, solo cuando el usuario la abre
+    // (ver loadCargaIntoDashboard).
+    const selectFields = [
+      'key', 'ts', 'filename',
+      'totalPedidos:data->totalPedidos',
+      'totalRenglones:data->totalRenglones',
+      'totalCosto:data->totalCosto',
+      'totalCantidad:data->totalCantidad',
+      'centros:data->centros',
+      'kumo:data->kumo',
+      'vtas:data->vtas',
+      'centroData:data->centroData',
+      'orgSummary:data->orgSummary',
+      'orgData:data->orgData',
+      'pedidoCodigoList:data->pedidoCodigoList'
+    ].join(',');
+
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?select=${encodeURIComponent(selectFields)}&order=ts.desc&limit=${LS_MAX}`, {
       headers: sbHeaders()
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const rows = await resp.json();
-    _CARGAS_CACHE = rows.map(r => ({ key: r.key, ts: r.ts, filename: r.filename, ...r.data }));
+    _CARGAS_CACHE = rows.map(r => ({ ...r }));
     _SB_ONLINE = true;
     if (badge) {
       badge.textContent = '☁️ Supabase conectado';
