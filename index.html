@@ -1112,12 +1112,83 @@ function lsGetAllCargasLocal() {
   return cargas.sort((a, b) => b.ts - a.ts);
 }
 
+// ===== COMPRESIÓN DEL ESPEJO DE FILAS (rawRows) =====
+// El espejo completo del Excel pesa ~15 MB en JSON (14k renglones × 36 columnas) y el
+// insert a Supabase excedía el tiempo límite (HTTP 500). Se guarda en formato columnar
+// (encabezados una sola vez) + gzip + base64 → ~1 MB. Se descarga sólo al abrir una carga.
+const RAW_FORMATO = 'columnar-gzip-b64-v1';
+
+function filasAColumnar(rows) {
+  const cols = [];
+  const idx = {};
+  rows.forEach(r => Object.keys(r).forEach(k => { if (!(k in idx)) { idx[k] = cols.length; cols.push(k); } }));
+  const dateCols = new Set();
+  const data = rows.map(r => cols.map((k, i) => {
+    const v = r[k];
+    if (v instanceof Date) { dateCols.add(i); return isNaN(v) ? '' : v.toISOString(); }
+    return v === undefined || v === null ? '' : v;
+  }));
+  return { cols, dateCols: [...dateCols], rows: data };
+}
+
+function columnarAFilas(obj) {
+  const dset = new Set(obj.dateCols || []);
+  return (obj.rows || []).map(arr => {
+    const r = {};
+    obj.cols.forEach((k, i) => {
+      const v = arr[i];
+      r[k] = (dset.has(i) && v) ? new Date(v) : (v === undefined ? '' : v);
+    });
+    return r;
+  });
+}
+
+async function comprimirFilas(rows) {
+  if (typeof CompressionStream === 'undefined') throw new Error('El navegador no soporta CompressionStream');
+  const json = JSON.stringify(filasAColumnar(rows));
+  const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+async function descomprimirFilas(b64) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('El navegador no soporta DecompressionStream');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const json = await new Response(stream).text();
+  return columnarAFilas(JSON.parse(json));
+}
+
+// Descarga de Supabase sólo el espejo comprimido de UNA carga (para restaurar datos exactos)
+async function sbDescargarFilasCarga(key) {
+  const sel = encodeURIComponent('rawGz:data->>rawGz');
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?select=${sel}&key=eq.${encodeURIComponent(key)}&limit=1`, { headers: sbHeaders() });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const rows = await resp.json();
+  return rows[0] && rows[0].rawGz ? rows[0].rawGz : null;
+}
+
 async function lsSaveCarga(data) {
   const tsMs = Date.now();
   const tsIso = new Date(tsMs).toISOString();
   const key = LS_PREFIX + tsMs;
   const snapshot = buildSnapshot(data);
+  // En memoria se conserva el espejo completo (rawRows) para esta sesión;
+  // a Supabase / localStorage se manda la versión ligera + espejo comprimido.
   const cargaObj = { ts: tsIso, filename: CURRENT_FILENAME, ...snapshot };
+  const { rawRows, ...snapshotLigero } = snapshot;
+  let rawGz = null;
+  try {
+    rawGz = await comprimirFilas(rawRows || []);
+  } catch (e) {
+    console.warn('No se pudo comprimir el espejo de filas; se guarda sólo el resumen:', e.message);
+  }
+  const dataGuardar = rawGz ? { ...snapshotLigero, rawGz, rawFormato: RAW_FORMATO } : snapshotLigero;
+  const cargaLocal = { ts: tsIso, filename: CURRENT_FILENAME, ...dataGuardar };
 
   // Actualizar caché en memoria de inmediato (UI optimista)
   _CARGAS_CACHE.unshift({ key, ...cargaObj });
@@ -1132,15 +1203,19 @@ async function lsSaveCarga(data) {
       const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}`, {
         method: 'POST',
         headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ key, ts: tsIso, filename: CURRENT_FILENAME, data: snapshot }),
+        body: JSON.stringify({ key, ts: tsIso, filename: CURRENT_FILENAME, data: dataGuardar }),
       });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      if (!resp.ok) {
+        let detalle = '';
+        try { detalle = (await resp.text()).slice(0, 300); } catch (_) {}
+        throw new Error('HTTP ' + resp.status + (detalle ? ' — ' + detalle : ''));
+      }
       showToast('✅ Carga guardada en Supabase (nube)');
     } catch (e) {
       console.warn('Error guardando en Supabase, usando localStorage:', e.message);
       _SB_ONLINE = false;
       try {
-        localStorage.setItem(key, JSON.stringify(cargaObj));
+        localStorage.setItem(key, JSON.stringify(cargaLocal));
         showToast('⚠️ Sin conexión a Supabase — guardado solo localmente');
       } catch(e2) {
         showToast('⚠️ Sin espacio para guardar esta carga');
@@ -1148,7 +1223,7 @@ async function lsSaveCarga(data) {
     }
   } else {
     try {
-      localStorage.setItem(key, JSON.stringify(cargaObj));
+      localStorage.setItem(key, JSON.stringify(cargaLocal));
       showToast('💾 Carga guardada localmente (sin conexión a Supabase)');
     } catch(e) {
       showToast('⚠️ Sin espacio en localStorage para guardar esta carga');
@@ -2740,10 +2815,27 @@ function renderHistorial() {
 }
 
 // ===== CARGAR CARGA HISTÓRICA EN DASHBOARD =====
-function loadCargaIntoDashboard(key) {
+async function loadCargaIntoDashboard(key) {
   const cargas = lsGetAllCargas();
   const carga = cargas.find(c => c.key === key);
   if (!carga || !carga.centroData) { showToast('⚠️ No se encontraron datos para esta carga'); return; }
+
+  // Si la carga no tiene el espejo en memoria, recuperarlo comprimido (localStorage o Supabase)
+  if (!(Array.isArray(carga.rawRows) && carga.rawRows.length > 0)) {
+    try {
+      let gz = carga.rawGz || null;
+      if (!gz && _SB_ONLINE) {
+        showToast('⏳ Descargando renglones de la carga...');
+        gz = await sbDescargarFilasCarga(key);
+      }
+      if (gz) {
+        carga.rawRows = await descomprimirFilas(gz);
+        delete carga.rawGz;
+      }
+    } catch (e) {
+      console.warn('No se pudo recuperar el espejo de filas; se usa reconstrucción aproximada:', e.message);
+    }
+  }
 
   // ESPEJO REAL: si la carga guardó las filas originales completas (rawRows), úsalas
   // directamente. Esto es lo que permite que el Analizador extraiga y exporte los
@@ -6473,4 +6565,4 @@ window.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
-/html>
+
