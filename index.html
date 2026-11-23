@@ -1929,6 +1929,22 @@ function calcSolicitudPedido(rows) {
   return Object.values(byKey).sort((a, b) => a.cen.localeCompare(b.cen) || b.solPed - a.solPed);
 }
 
+// Resume por Centro las filas de calcSolicitudPedido: SKUs, cuántos cumplen 100%,
+// piezas pendientes, piezas cubiertas (Sol. Ped. + OC, tope pendiente) y % de cumplimiento.
+function calcSolPedPorCentro(spRows) {
+  const m = {};
+  spRows.forEach(x => {
+    if (!m[x.cen]) m[x.cen] = { cen: x.cen, org: x.org || '', skus: 0, skusCumplen: 0, skusNoCumplen: 0, pend: 0, cubierto: 0 };
+    const d = m[x.cen];
+    d.skus++;
+    if (x.pctCumpl >= 100) d.skusCumplen++; else d.skusNoCumplen++;
+    d.pend += x.pend;
+    d.cubierto += x.cubierto;
+  });
+  return Object.values(m).map(d => ({ ...d, pct: d.pend > 0 ? (d.cubierto / d.pend) * 100 : 100 }))
+    .sort((a, b) => a.cen.localeCompare(b.cen));
+}
+
 function escHtml(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
@@ -4703,7 +4719,6 @@ function renderEmailBody() {
 
       resumenAvanceHTML = `
       <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:10pt;margin-bottom:14px;">
-        ${orgUnica ? `<tr><td colspan="6" style="padding:4px 10px;font-size:9pt;color:#1F3864;background:#D6EAF8;">Totales calculados sólo para Org. Ventas <strong>${escHtml(orgUnica)}</strong>${centroFiltroActivo ? ` · Centro <strong>${escHtml(centroFiltroActivo)}</strong>` : ''}</td></tr>` : ''}
         <tr style="background:#1F3864;color:#fff;">
           <th style="padding:7px 10px;text-align:center;">Reng. Carga A<br><span style="font-weight:400;font-size:8.5pt;">${compDateA}</span></th>
           <th style="padding:7px 10px;text-align:center;">Reng. Carga B<br><span style="font-weight:400;font-size:8.5pt;">${compDateB}</span></th>
@@ -4930,47 +4945,44 @@ function renderEmailBody() {
     const cumplen = solPedRows.filter(x => x.pctCumpl >= 100);
     const noCumplen = solPedRows.filter(x => x.pctCumpl < 100).sort((a, b) => a.pctCumpl - b.pctCumpl);
 
-    // Tabla compacta: Centro · Código · Pend. · SolPed · OC · %
-    const thC = 'padding:5px 6px;text-align:center;font-size:9pt;';
-    const tdC = 'padding:4px 6px;text-align:center;font-size:9pt;';
-    const tablaLado = (rows, titulo, colorHdr, colorAlt, enNegrita) => {
-      const fw = enNegrita ? 'font-weight:bold;' : '';
-      const tot = rows.reduce((a, x) => ({ p: a.p + x.pend, s: a.s + x.solPed, o: a.o + x.oc, c: a.c + x.cubierto }), { p: 0, s: 0, o: 0, c: 0 });
-      const pct = tot.p > 0 ? (tot.c / tot.p) * 100 : 100;
-      const body = rows.length === 0
-        ? `<tr><td colspan="6" style="${tdC}color:#718096;">Sin códigos</td></tr>`
-        : rows.map((x, i) => `<tr style="background:${i % 2 === 0 ? colorAlt : '#fff'};${fw}">
-      <td style="${tdC}text-align:left;color:#0284c7;">${escHtml(x.cen)}</td>
-      <td style="${tdC}text-align:left;">${escHtml(x.cod)}</td>
-      <td style="${tdC}">${fmt(x.pend)}</td>
-      <td style="${tdC}">${fmt(x.solPed)}</td>
-      <td style="${tdC}">${x.oc > 0 ? fmt(x.oc) : '—'}</td>
-      <td style="${tdC}color:${colorHdr};">${x.pctCumpl.toFixed(0)}%</td>
-    </tr>`).join('');
-      return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;border:1px solid #BDC3C7;">
-    <tr><td colspan="6" style="padding:6px;background:${colorHdr};color:#fff;font-weight:bold;font-size:9.5pt;">${titulo} (${fmt(rows.length)})</td></tr>
-    <tr style="background:#1F3864;color:#fff;">
-      <th style="${thC}text-align:left;">Centro</th><th style="${thC}text-align:left;">Código</th>
-      <th style="${thC}">Pend.</th><th style="${thC}">Sol. Ped.</th><th style="${thC}">OC</th><th style="${thC}">% Cumpl.</th>
-    </tr>
-    ${body}
-    <tr style="background:#D6EAF8;border-top:2px solid #1F3864;font-weight:bold;">
-      <td colspan="2" style="${tdC}text-align:left;color:#1F3864;">TOTAL</td>
-      <td style="${tdC}">${fmt(tot.p)}</td><td style="${tdC}">${fmt(tot.s)}</td><td style="${tdC}">${fmt(tot.o)}</td>
-      <td style="${tdC}color:${colorHdr};">${pct.toFixed(0)}%</td>
-    </tr>
-  </table>`;
-    };
-
+    // Tabla compacta POR CENTRO: SKUs, SKUs que cumplen / no cumplen, piezas y % de cumplimiento.
+    // (El detalle por código se exporta en la hoja "SOLICITUD PEDIDO" del Excel del Analizador.)
+    const porCen = calcSolPedPorCentro(solPedRows);
+    const tot = porCen.reduce((a, x) => ({ s: a.s + x.skus, sc: a.sc + x.skusCumplen, sn: a.sn + x.skusNoCumplen, p: a.p + x.pend, c: a.c + x.cubierto }), { s: 0, sc: 0, sn: 0, p: 0, c: 0 });
+    const colPct = v => v >= 100 ? '#1E8449' : v >= 80 ? '#B8860B' : '#C0392B';
     solPedBlock = `
-<p><strong>Códigos con cantidad en Solicitud de Pedido por Centro (${fmt(solPedRows.length)} código/centro) — cumplimiento de la venta con Solicitud de Pedido + OC: ${pctTot.toFixed(1)}%</strong></p>
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:16px;">
-  <tr>
-    <td width="50%" valign="top" style="padding-right:6px;vertical-align:top;">${tablaLado(cumplen, '✅ Cumplen 100%', '#1E8449', '#EAF7EE', false)}</td>
-    <td width="50%" valign="top" style="padding-left:6px;vertical-align:top;">${tablaLado(noCumplen, '⚠️ No cumplen', '#C0392B', '#FDEDEC', true)}</td>
+<p><strong>Cumplimiento de Solicitud de Pedido + OC por Centro — cumplimiento general: ${pctTot.toFixed(1)}%</strong></p>
+<table ${tablaE}>
+  <tr style="background:#1F3864;color:#fff;">
+    <th style="${thE}text-align:left;">Centro</th>
+    <th style="${thE}text-align:left;">Org. Ventas</th>
+    <th style="${thE}">SKUs con Sol. Ped.</th>
+    <th style="${thE}background:#1E8449;">SKUs cumplen</th>
+    <th style="${thE}background:#C0392B;">SKUs no cumplen</th>
+    <th style="${thE}">Piezas pendientes</th>
+    <th style="${thE}">Piezas cumplidas</th>
+    <th style="${thE}">% Cumplimiento</th>
   </tr>
-</table>
-<p style="font-size:8.5pt;color:#718096;margin-top:-10px;">Sol. Ped. y OC se repiten en cada renglón del mismo código/centro; se muestra el valor máximo, no la suma. % Cumpl. = (Sol. Ped. + OC) ÷ Cantidad Pendiente, tope 100%. No se consideran Solicitudes de Pedido negativas.</p>`;
+  ${porCen.map((x, i) => `<tr style="background:${i % 2 === 0 ? '#EBF5FB' : '#fff'};">
+    <td style="${tdE}font-weight:bold;color:#0284c7;">${escHtml(x.cen)}</td>
+    <td style="${tdE}font-size:9pt;">${escHtml(x.org)}</td>
+    <td style="${tdE}text-align:center;">${fmt(x.skus)}</td>
+    <td style="${tdE}text-align:center;color:#1E8449;font-weight:bold;">${fmt(x.skusCumplen)}</td>
+    <td style="${tdE}text-align:center;color:#C0392B;font-weight:bold;">${x.skusNoCumplen > 0 ? fmt(x.skusNoCumplen) : '—'}</td>
+    <td style="${tdE}text-align:center;">${fmt(x.pend)}</td>
+    <td style="${tdE}text-align:center;">${fmt(x.cubierto)}</td>
+    <td style="${tdE}text-align:center;font-weight:bold;color:${colPct(x.pct)};">${x.pct.toFixed(1)}%</td>
+  </tr>`).join('')}
+  <tr style="background:#D6EAF8;border-top:2px solid #1F3864;">
+    <td colspan="2" style="padding:7px 8px;font-weight:bold;color:#1F3864;text-transform:uppercase;font-size:9pt;">Total general</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.s)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#1E8449;">${fmt(tot.sc)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;color:#C0392B;">${fmt(tot.sn)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.p)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.c)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;color:${colPct(pctTot)};">${pctTot.toFixed(1)}%</td>
+  </tr>
+</table>`;
   } else {
     solPedBlock = ''; // sin información: se oculta el párrafo/tabla
   }
@@ -4981,7 +4993,7 @@ function renderEmailBody() {
   if (sinCobRows.length > 0) {
     const tot = sinCobRows.reduce((a, [, d]) => ({ r: a.r + d.renglones, p: a.p + d.peds.size, c: a.c + d.costo }), { r: 0, p: 0, c: 0 });
     sinCobBlock = `
-<p><strong>Renglones con plazo SOBREPEDIDO sin Solicitud de Pedido (se omiten los que ya tienen OC):</strong></p>
+<p><strong>Renglones con plazo SOBREPEDIDO sin Solicitud de Pedido:</strong></p>
 <table ${tablaE}>
   <tr style="background:#922B21;color:#fff;">
     <th style="${thE}text-align:left;">Centro</th>
@@ -5014,7 +5026,7 @@ function renderEmailBody() {
   let mr12Block = '';
   if (mr12Rows.length > 0) {
     mr12Block = `
-<p><strong>Pedidos con MR12 — Motivo de Rechazo 12 (${fmt(mr12Rows.length)} pedidos únicos, sin duplicar):</strong></p>
+<p><strong>Pedidos con MR12 — Motivo de Rechazo 12 (${fmt(mr12Rows.length)} pedidos):</strong></p>
 <table ${tablaE}>
   <tr style="background:#6C3483;color:#fff;">
     <th style="${thE}text-align:left;">Número de Pedido</th>
@@ -5041,8 +5053,7 @@ function renderEmailBody() {
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(mr12Rows.reduce((a, x) => a + x.renglones, 0))}</td>
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmtM(mr12Rows.reduce((a, x) => a + x.costo, 0))}</td>
   </tr>
-</table>
-<p style="font-size:8.5pt;color:#718096;margin-top:-10px;">MR12 = renglones con Motivo de Rechazo 12.</p>`;
+</table>`;
   } else {
     mr12Block = ''; // sin información: se oculta el párrafo/tabla
   }
@@ -5105,6 +5116,22 @@ function renderEmailBody() {
   const cenOrden = [...new Set(pedsSinFact.map(d => d.cen))].sort((a, b) => a.localeCompare(b));
   const colorCen = cen => PALETA_CEN[Math.max(0, cenOrden.indexOf(cen)) % PALETA_CEN.length];
 
+  // Tipo de documento que falta según el número de pedido: 5… = Factura, 6… = Nota de crédito
+  const docFaltante = ped => {
+    const p0 = String(ped || '').trim().charAt(0);
+    return p0 === '6' ? 'Nota de crédito' : p0 === '5' ? 'Factura' : 'Factura';
+  };
+  // Texto según lo que realmente aparece en el listado (si están ambos, se mencionan ambos)
+  const etiquetaDocs = rows => {
+    const tipos = new Set(rows.map(x => docFaltante(x.ped)));
+    if (tipos.has('Factura') && tipos.has('Nota de crédito')) return 'factura / nota de crédito';
+    return tipos.has('Nota de crédito') ? 'nota de crédito' : 'factura';
+  };
+  const procesoDocs = rows => {
+    const e = etiquetaDocs(rows);
+    return e === 'factura' ? 'la facturación' : e === 'nota de crédito' ? 'la nota de crédito' : 'la facturación / nota de crédito';
+  };
+
   const tablaSinFact = (rows, titulo, nota, cHdr, cAlt, cTot) => {
     if (rows.length === 0) return '';
     const sumar = arr => arr.reduce((a, x) => ({ r: a.r + x.renglones, v: a.v + x.vend, e: a.e + x.ent, p: a.p + x.pend, c: a.c + x.costo }), { r: 0, v: 0, e: 0, p: 0, c: 0 });
@@ -5119,7 +5146,7 @@ function renderEmailBody() {
       const [cF, cC, cCC] = colorCen(cen);
       const st = sumar(lista);
       const encabezado = `<tr style="background:${cF};color:#fff;">
-    <td colspan="8" style="padding:6px 8px;color:#fff;background:${cF};font-weight:bold;font-size:9.5pt;">Centro ${escHtml(cen)} · ${fmt(lista.length)} pedido${lista.length === 1 ? '' : 's'}</td>
+    <td colspan="9" style="padding:6px 8px;color:#fff;background:${cF};font-weight:bold;font-size:9.5pt;">Centro ${escHtml(cen)} · ${fmt(lista.length)} pedido${lista.length === 1 ? '' : 's'}</td>
     <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${fmt(st.r)}</td>
     <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${n(st.v)}</td>
     <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${n(st.e)}</td>
@@ -5137,6 +5164,7 @@ function renderEmailBody() {
     <td style="${tdE}text-align:center;">${escHtml(x.cliente)}</td>
     <td style="${tdE}font-size:9pt;">${escHtml(x.vendedor)}</td>
     <td style="${tdE}text-align:center;">${escHtml([...x.status].join(', ') || '—')}</td>
+    <td style="${tdE}text-align:center;font-weight:bold;color:${docFaltante(x.ped) === 'Nota de crédito' ? '#7D3C98' : '#B9770E'};">${docFaltante(x.ped)}</td>
     <td style="${tdE}text-align:center;">${fmt(x.renglones)}</td>
     <td style="${tdE}text-align:center;">${n(x.vend)}</td>
     <td style="${tdE}text-align:center;font-weight:bold;">${n(x.ent)}</td>
@@ -5159,6 +5187,7 @@ function renderEmailBody() {
     <th style="${thE}">Cliente</th>
     <th style="${thE}text-align:left;">Vendedor</th>
     <th style="${thE}">Status Fact.</th>
+    <th style="${thE}">Falta</th>
     <th style="${thE}">Reng.</th>
     <th style="${thE}">Cant. Vendida</th>
     <th style="${thE}">Cant. Entregada</th>
@@ -5167,7 +5196,7 @@ function renderEmailBody() {
   </tr>
   ${cuerpo}
   <tr style="background:${cTot};border-top:2px solid ${cHdr};">
-    <td colspan="8" style="padding:7px 8px;font-weight:bold;color:${cHdr};text-transform:uppercase;font-size:9pt;">Total pedidos: ${fmt(rows.length)}</td>
+    <td colspan="9" style="padding:7px 8px;font-weight:bold;color:${cHdr};text-transform:uppercase;font-size:9pt;">Total pedidos: ${fmt(rows.length)}</td>
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.r)}</td>
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${n(tot.v)}</td>
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${n(tot.e)}</td>
@@ -5180,22 +5209,23 @@ function renderEmailBody() {
 
   let sinFactBlock = '';
   if (pedsSinFact.length > 0) {
+    const eTot = etiquetaDocs(pedsSinFact), ePos = etiquetaDocs(sinFactEntPos), e0 = etiquetaDocs(sinFactEnt0);
     sinFactBlock = `
-<p><strong>Pedidos sin factura — revisar proceso incompleto de facturación o cancelaciones (${fmt(pedsSinFact.length)} pedidos):</strong></p>
-${tablaSinFact(sinFactEntPos, '🧾 Con cantidad entregada (≥ 0.01) y sin factura — proceso de facturación incompleto',
-  'Pedidos con mercancía entregada pero sin Folio Factura: concluir la facturación o, si procede, la cancelación del pedido.',
+<p><strong>Pedidos sin ${eTot} — revisar proceso incompleto de ${procesoDocs(pedsSinFact).replace(/^la /, '')} o cancelaciones (${fmt(pedsSinFact.length)} pedidos):</strong></p>
+${tablaSinFact(sinFactEntPos, `🧾 Con cantidad entregada y sin ${ePos} — proceso incompleto`,
+  `Pedidos con mercancía entregada pero sin ${ePos}: concluir ${procesoDocs(sinFactEntPos)} o, si procede, la cancelación del pedido.`,
   '#B9770E', '#FEF5E7', '#FAD7A0')}
-${tablaSinFact(sinFactEnt0, '🚫 Con cantidad entregada cero (o negativa) y sin factura — revisar cancelación',
-  'Pedidos sin entrega y sin Folio Factura: validar si deben cancelarse o si siguen vigentes (apartados / pendientes de surtir).',
+${tablaSinFact(sinFactEnt0, `🚫 Sin cantidad entregada y sin ${e0} — revisar cancelación`,
+  `Pedidos sin entrega y sin ${e0}: validar si deben cancelarse o si siguen vigentes.`,
   '#7B241C', '#F9EBEA', '#E6B0AA')}`;
   }
 
   // Párrafo introductorio: sólo menciona las secciones que sí tienen información
   const introLista = [`la tabla neta de pedidos únicos y renglones, costo de venta y % del total ${orgTotalLabel} por sucursal`];
-  if (solPedBlock) introLista.push('los códigos con Solicitud de Pedido por centro');
+  if (solPedBlock) introLista.push('el cumplimiento de Solicitud de Pedido + OC por centro');
   if (sinCobBlock) introLista.push('los renglones SOBREPEDIDO sin Solicitud de Pedido');
   if (mr12Block) introLista.push('los pedidos con MR12');
-  if (sinFactBlock) introLista.push('los pedidos sin factura (entregados sin facturar y sin entrega para revisar cancelación)');
+  if (sinFactBlock) introLista.push(`los pedidos sin ${etiquetaDocs(pedsSinFact)} (con entrega y sin entrega para revisar cancelación)`);
   if (resumenAvanceHTML) introLista.push('la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima');
   const introPartes = introLista.length > 1
     ? introLista.slice(0, -1).join(', ') + ', así como ' + introLista[introLista.length - 1]
@@ -5203,7 +5233,7 @@ ${tablaSinFact(sinFactEnt0, '🚫 Con cantidad entregada cero (o negativa) y sin
 
   const emailHtml = `
 <p>Buen día Gerentes,</p>
-<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando ${introPartes}. <em>Nota: no se incluyen los documentos tipo ZAP0.</em></p>
+<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando ${introPartes}.</p>
 <br>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
@@ -5841,27 +5871,83 @@ function anzBuildWorkbook(centrosEnGrupo) {
   wsRes['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, wsRes, 'RESUMEN');
 
-  // Hoja SOLICITUD PEDIDO: 1 fila por Centro + Código (cantidad = máximo, no suma)
-  const spRows = calcSolicitudPedido(sortedCentros.flatMap(c => anzCentroGroups[c] || []));
-  const spHdr = ['Centro', 'Org. Ventas', 'Código', 'Descripción', 'Renglones', 'Pedidos Únicos',
-    'Cant. Pendiente (suma)', 'Cant. Solicitud de Pedido', '% Cumplimiento (SolPed + OC)', 'Orden de Compra'].map(
-    v => ({ v, t: 's', s: anzMkStyle(ANZ_H_FILL, ANZ_H_FONT, true) })
-  );
-  const spData = [spHdr];
-  spRows.forEach((x, i) => {
-    const fill = i % 2 === 0 ? 'EBF5FB' : 'FFFFFF';
+  // Hoja SOLICITUD PEDIDO — una sola hoja con todas las tablas de esta sección del correo:
+  //   1) Resumen de cumplimiento por Centro (SKUs, piezas, %)
+  //   2) Detalle de códigos que cumplen 100%
+  //   3) Detalle de códigos que NO cumplen
+  // Igual que en el correo, se omiten los documentos tipo ZAP0.
+  const spBase = sortedCentros.flatMap(c => anzCentroGroups[c] || [])
+    .filter(r => String(col(r, 'Clase del Documento') || '').trim().toUpperCase() !== 'ZAP0');
+  const spRows = calcSolicitudPedido(spBase);
+  const spPorCen = calcSolPedPorCentro(spRows);
+  const SP_NCOLS = 11;
+  const spData = [];
+  const spMerges = [];
+  const hdrCells = (arr, fill) => arr.map(v => ({ v, t: 's', s: anzMkStyle(fill || ANZ_H_FILL, ANZ_H_FONT, true) }));
+  const tituloSec = (txt, fill) => {
+    const row = [{ v: txt, t: 's', s: { ...anzMkStyle(fill, 'FFFFFF', true), font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } } } }];
+    for (let i = 1; i < SP_NCOLS; i++) row.push({ v: '', t: 's', s: anzMkStyle(fill, 'FFFFFF', true) });
+    spMerges.push({ s: { r: spData.length, c: 0 }, e: { r: spData.length, c: SP_NCOLS - 1 } });
+    spData.push(row);
+  };
+  const pctCell = (pct, fill) => ({ v: pct / 100, t: 'n', z: '0.0%', s: { ...anzMkStyle(fill, pct >= 100 ? '1E8449' : pct >= 80 ? 'B8860B' : 'C0392B', true), numFmt: '0.0%' } });
+
+  if (spRows.length === 0) {
+    tituloSec('SOLICITUD DE PEDIDO — sin renglones con Solicitud de Pedido', ANZ_H_FILL);
+  } else {
+    // 1) Resumen por centro
+    const totP = spPorCen.reduce((a, x) => ({ s: a.s + x.skus, sc: a.sc + x.skusCumplen, sn: a.sn + x.skusNoCumplen, p: a.p + x.pend, c: a.c + x.cubierto }), { s: 0, sc: 0, sn: 0, p: 0, c: 0 });
+    const pctGen = totP.p > 0 ? (totP.c / totP.p) * 100 : 100;
+    tituloSec(`CUMPLIMIENTO DE SOLICITUD DE PEDIDO + OC POR CENTRO — GENERAL ${pctGen.toFixed(1)}%`, ANZ_H_FILL);
+    spData.push(hdrCells(['Centro', 'Org. Ventas', 'SKUs con Sol. Ped.', 'SKUs cumplen', 'SKUs no cumplen', 'Piezas pendientes', 'Piezas cumplidas', '% Cumplimiento']));
+    spPorCen.forEach((x, i) => {
+      const fill = i % 2 === 0 ? 'EBF5FB' : 'FFFFFF';
+      spData.push([
+        anzStrCell(x.cen, fill, '0284C7'), anzStrCell(x.org, fill),
+        anzNumCell(x.skus, fill), anzNumCell(x.skusCumplen, fill, '1E8449'), anzNumCell(x.skusNoCumplen, fill, 'C0392B'),
+        anzNumCell(x.pend, fill), anzNumCell(x.cubierto, fill), pctCell(x.pct, fill)
+      ]);
+    });
+    const fT = 'D6EAF8';
     spData.push([
-      anzStrCell(x.cen, fill), anzStrCell(x.org, fill), anzStrCell(x.cod, fill), anzStrCell(x.desc, fill),
-      anzNumCell(x.renglones, fill), anzNumCell(x.peds.size, fill), anzNumCell(x.pend, fill),
-      { v: x.solPed, t: 'n', s: anzMkStyle(fill, '1F3864', true) },
-      { v: x.pctCumpl / 100, t: 'n', z: '0%', s: { ...anzMkStyle(fill, x.pctCumpl >= 100 ? '1E8449' : x.pctCumpl >= 50 ? 'B8860B' : 'C0392B', true), numFmt: '0%' } },
-      anzNumCell(x.oc, fill)
+      { v: 'TOTAL GENERAL', t: 's', s: anzMkStyle(fT, '1F3864', true) }, { v: '', t: 's', s: anzMkStyle(fT, '1F3864', true) },
+      { v: totP.s, t: 'n', s: anzMkStyle(fT, '1F3864', true) }, { v: totP.sc, t: 'n', s: anzMkStyle(fT, '1E8449', true) },
+      { v: totP.sn, t: 'n', s: anzMkStyle(fT, 'C0392B', true) }, { v: totP.p, t: 'n', s: anzMkStyle(fT, '1F3864', true) },
+      { v: totP.c, t: 'n', s: anzMkStyle(fT, '1F3864', true) }, pctCell(pctGen, fT)
     ]);
-  });
-  if (spRows.length === 0) spData.push([anzStrCell('Sin renglones con Solicitud de Pedido', 'FFFFFF')]);
+    spData.push([]);
+
+    // 2) y 3) Detalle por código
+    const detHdr = ['Centro', 'Org. Ventas', 'Código', 'Descripción', 'Renglones', 'Pedidos Únicos',
+      'Cant. Pendiente', 'Cant. Sol. Pedido', 'Orden de Compra', 'Piezas cumplidas', '% Cumplimiento'];
+    const detalle = (rows, titulo, colorSec, colorAlt) => {
+      tituloSec(`${titulo} (${rows.length} SKUs)`, colorSec);
+      spData.push(hdrCells(detHdr));
+      if (rows.length === 0) { spData.push([anzStrCell('Sin códigos', 'FFFFFF')]); spData.push([]); return; }
+      rows.forEach((x, i) => {
+        const fill = i % 2 === 0 ? colorAlt : 'FFFFFF';
+        spData.push([
+          anzStrCell(x.cen, fill, '0284C7'), anzStrCell(x.org, fill), anzStrCell(x.cod, fill), anzStrCell(x.desc, fill),
+          anzNumCell(x.renglones, fill), anzNumCell(x.peds.size, fill), anzNumCell(x.pend, fill),
+          { v: x.solPed, t: 'n', s: anzMkStyle(fill, '1F3864', true) },
+          anzNumCell(x.oc, fill), anzNumCell(x.cubierto, fill), pctCell(x.pctCumpl, fill)
+        ]);
+      });
+      const t = rows.reduce((a, x) => ({ r: a.r + x.renglones, p: a.p + x.pend, s: a.s + x.solPed, o: a.o + x.oc, c: a.c + x.cubierto }), { r: 0, p: 0, s: 0, o: 0, c: 0 });
+      const st = c => anzMkStyle('D6EAF8', c || '1F3864', true);
+      spData.push([
+        { v: 'TOTAL', t: 's', s: st() }, { v: '', t: 's', s: st() }, { v: '', t: 's', s: st() }, { v: '', t: 's', s: st() },
+        { v: t.r, t: 'n', s: st() }, { v: '', t: 's', s: st() }, { v: t.p, t: 'n', s: st() }, { v: t.s, t: 'n', s: st() },
+        { v: t.o, t: 'n', s: st() }, { v: t.c, t: 'n', s: st() }, pctCell(t.p > 0 ? (t.c / t.p) * 100 : 100, 'D6EAF8')
+      ]);
+      spData.push([]);
+    };
+    detalle(spRows.filter(x => x.pctCumpl >= 100), '✅ CÓDIGOS QUE CUMPLEN 100%', '1E8449', 'EAF7EE');
+    detalle(spRows.filter(x => x.pctCumpl < 100).sort((a, b) => a.cen.localeCompare(b.cen) || a.pctCumpl - b.pctCumpl), '⚠️ CÓDIGOS QUE NO CUMPLEN', 'C0392B', 'FDEDEC');
+  }
   const wsSp = XLSX.utils.aoa_to_sheet(spData);
-  wsSp['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 13 }];
-  wsSp['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(spData.length - 1, 1), c: 9 } }) };
+  wsSp['!cols'] = [{ wch: 9 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 11 }, { wch: 12 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }];
+  wsSp['!merges'] = spMerges;
   XLSX.utils.book_append_sheet(wb, wsSp, 'SOLICITUD PEDIDO');
 
   return wb;
@@ -6387,3 +6473,4 @@ window.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
+/html>
