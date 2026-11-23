@@ -4961,7 +4961,7 @@ function renderEmailBody() {
 </table>
 <p style="font-size:8.5pt;color:#718096;margin-top:-10px;">Sol. Ped. y OC se repiten en cada renglón del mismo código/centro; se muestra el valor máximo, no la suma. % Cumpl. = (Sol. Ped. + OC) ÷ Cantidad Pendiente, tope 100%. No se consideran Solicitudes de Pedido negativas.</p>`;
   } else {
-    solPedBlock = `<p><strong>Solicitud de Pedido:</strong> no hay renglones con cantidad en Solicitud de Pedido en este corte.</p>`;
+    solPedBlock = ''; // sin información: se oculta el párrafo/tabla
   }
 
   // Tabla 2: SOBREPEDIDO sin Solicitud de Pedido (renglones con OC omitidos)
@@ -4995,7 +4995,7 @@ function renderEmailBody() {
   </tr>
 </table>`;
   } else {
-    sinCobBlock = `<p><strong>SOBREPEDIDO sin Solicitud de Pedido:</strong> ✅ todos los renglones SOBREPEDIDO tienen Solicitud de Pedido u OC.</p>`;
+    sinCobBlock = ''; // sin información: se oculta el párrafo/tabla
   }
 
   // Tabla 3: pedidos únicos con MR12
@@ -5033,12 +5033,126 @@ function renderEmailBody() {
 </table>
 <p style="font-size:8.5pt;color:#718096;margin-top:-10px;">MR12 = renglones con Motivo de Rechazo 12.</p>`;
   } else {
-    mr12Block = `<p><strong>Pedidos con MR12:</strong> no se encontraron pedidos con MR12 en este corte.</p>`;
+    mr12Block = ''; // sin información: se oculta el párrafo/tabla
   }
+
+  // ============================================
+  // PEDIDOS SIN FACTURA (Folio Factura vacío)
+  // Se agrupa POR PEDIDO sobre FILTERED (respeta filtros de Org. y Centro).
+  // Un pedido se considera "sin factura" si ninguno de sus renglones trae
+  // Folio Factura. Se separa por la Cantidad Entregada del pedido:
+  //   · Entregada = 0      → sin entrega ni factura (revisar cancelación / apartado)
+  //   · Entregada ≥ 0.01   → entregado sin factura (proceso de facturación incompleto)
+  // ============================================
+  const sinFactByPed = {};
+  FILTERED.forEach(r => {
+    const ped = String(col(r,'Numero de Pedido') || '').trim();
+    if (!ped) return;
+    const folio = String(colAny(r, ['Folio Factura', 'Folio de Factura', 'Factura', 'Numero de Factura']) || '').trim();
+    if (!sinFactByPed[ped]) sinFactByPed[ped] = {
+      ped, cen: String(col(r,'Centro') || '').trim(), org: col(r,'Organizacion de Ventas'),
+      clase: col(r,'Clase del Documento'), fecha: col(r,'Fecha de Registro'),
+      cliente: col(r,'Numero del Cliente'), vendedor: getVendedor(r), plazo: col(r,'Plazo de Entrega'),
+      status: new Set(), motivos: new Set(), mr: new Set(), conFolio: false,
+      renglones: 0, vend: 0, ent: 0, pend: 0, costo: 0
+    };
+    const d = sinFactByPed[ped];
+    if (folio) d.conFolio = true;
+    d.renglones++;
+    d.vend += numVal(col(r,'Cantidad Vendida'));
+    d.ent += numVal(col(r,'Cantidad Entregada'));
+    d.pend += numVal(col(r,'Cantidad Pendiente'));
+    d.costo += numVal(col(r,'Costo de Venta Contable Pendiente'));
+    const st = String(col(r,'Status facturado') || '').trim();
+    if (st) d.status.add(st);
+    const mp = String(col(r,'Motivo Pendiente de Picking') || '').trim();
+    if (mp) d.motivos.add(mp);
+    const mr = String(col(r,'Motivo de Rechazo') || '').trim();
+    if (mr) d.mr.add(mr);
+  });
+  const pedsSinFact = Object.values(sinFactByPed).filter(d => !d.conFolio)
+    .sort((a, b) => a.cen.localeCompare(b.cen) || String(a.ped).localeCompare(String(b.ped)));
+  const sinFactEnt0 = pedsSinFact.filter(d => d.ent < 0.01);
+  const sinFactEntPos = pedsSinFact.filter(d => d.ent >= 0.01);
+
+  const tablaSinFact = (rows, titulo, nota, cHdr, cAlt, cTot) => {
+    if (rows.length === 0) return '';
+    const tot = rows.reduce((a, x) => ({ r: a.r + x.renglones, v: a.v + x.vend, e: a.e + x.ent, p: a.p + x.pend, c: a.c + x.costo }), { r: 0, v: 0, e: 0, p: 0, c: 0 });
+    const n = v => fmt(v) === '0' && v !== 0 ? v.toFixed(2) : fmt(v);
+    return `
+<p><strong>${titulo} (${fmt(rows.length)} pedidos únicos):</strong></p>
+<table ${tablaE}>
+  <tr style="background:${cHdr};color:#fff;">
+    <th style="${thE}text-align:left;">Número de Pedido</th>
+    <th style="${thE}text-align:left;">Centro</th>
+    <th style="${thE}text-align:left;">Org. Ventas</th>
+    <th style="${thE}">Clase Doc.</th>
+    <th style="${thE}">Fecha Registro</th>
+    <th style="${thE}">Cliente</th>
+    <th style="${thE}text-align:left;">Vendedor</th>
+    <th style="${thE}">Status Fact.</th>
+    <th style="${thE}">Reng.</th>
+    <th style="${thE}">Cant. Vendida</th>
+    <th style="${thE}">Cant. Entregada</th>
+    <th style="${thE}">Cant. Pendiente</th>
+    <th style="${thE}text-align:left;">Motivo / Rechazo</th>
+  </tr>
+  ${rows.map((x, i) => {
+    const motivo = [...x.motivos, ...[...x.mr].map(m => 'MR' + m)].join(' · ') || '—';
+    return `<tr style="background:${i % 2 === 0 ? cAlt : '#fff'};">
+    <td style="${tdE}font-weight:bold;color:${cHdr};">${escHtml(x.ped)}</td>
+    <td style="${tdE}color:#0284c7;font-weight:bold;">${escHtml(x.cen)}</td>
+    <td style="${tdE}font-size:9pt;">${escHtml(x.org)}</td>
+    <td style="${tdE}text-align:center;font-size:9pt;">${escHtml(x.clase)}</td>
+    <td style="${tdE}text-align:center;">${escHtml(fmtFechaCorta(x.fecha))}</td>
+    <td style="${tdE}text-align:center;">${escHtml(x.cliente)}</td>
+    <td style="${tdE}font-size:9pt;">${escHtml(x.vendedor)}</td>
+    <td style="${tdE}text-align:center;">${escHtml([...x.status].join(', ') || '—')}</td>
+    <td style="${tdE}text-align:center;">${fmt(x.renglones)}</td>
+    <td style="${tdE}text-align:center;">${n(x.vend)}</td>
+    <td style="${tdE}text-align:center;font-weight:bold;">${n(x.ent)}</td>
+    <td style="${tdE}text-align:center;">${n(x.pend)}</td>
+    <td style="${tdE}font-size:8.5pt;">${escHtml(motivo)}</td>
+  </tr>`;
+  }).join('')}
+  <tr style="background:${cTot};border-top:2px solid ${cHdr};">
+    <td colspan="8" style="padding:7px 8px;font-weight:bold;color:${cHdr};text-transform:uppercase;font-size:9pt;">Total pedidos: ${fmt(rows.length)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.r)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${n(tot.v)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${n(tot.e)}</td>
+    <td style="padding:7px 8px;text-align:center;font-weight:bold;">${n(tot.p)}</td>
+    <td style="padding:7px 8px;">&nbsp;</td>
+  </tr>
+</table>
+<p style="font-size:8.5pt;color:#718096;margin-top:-10px;">${nota}</p>`;
+  };
+
+  let sinFactBlock = '';
+  if (pedsSinFact.length > 0) {
+    sinFactBlock = `
+<p><strong>Pedidos sin factura — revisar proceso incompleto de facturación o cancelaciones (${fmt(pedsSinFact.length)} pedidos):</strong></p>
+${tablaSinFact(sinFactEntPos, '🧾 Con cantidad entregada (≥ 0.01) y sin factura — proceso de facturación incompleto',
+  'Pedidos con mercancía entregada pero sin Folio Factura: concluir la facturación o, si procede, la cancelación del pedido.',
+  '#B9770E', '#FEF5E7', '#FAD7A0')}
+${tablaSinFact(sinFactEnt0, '🚫 Con cantidad entregada cero (o negativa) y sin factura — revisar cancelación',
+  'Pedidos sin entrega y sin Folio Factura: validar si deben cancelarse o si siguen vigentes (apartados / pendientes de surtir).',
+  '#7B241C', '#F9EBEA', '#E6B0AA')}`;
+  }
+
+  // Párrafo introductorio: sólo menciona las secciones que sí tienen información
+  const introLista = [`la tabla neta de pedidos únicos y renglones, costo de venta y % del total ${orgTotalLabel} por sucursal`];
+  if (solPedBlock) introLista.push('los códigos con Solicitud de Pedido por centro');
+  if (sinCobBlock) introLista.push('los renglones SOBREPEDIDO sin Solicitud de Pedido');
+  if (mr12Block) introLista.push('los pedidos con MR12');
+  if (sinFactBlock) introLista.push('los pedidos sin factura (entregados sin facturar y sin entrega para revisar cancelación)');
+  if (resumenAvanceHTML) introLista.push('la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima');
+  const introPartes = introLista.length > 1
+    ? introLista.slice(0, -1).join(', ') + ', así como ' + introLista[introLista.length - 1]
+    : introLista[0];
 
   const emailHtml = `
 <p>Buen día Gerentes,</p>
-<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando la tabla neta de pedidos únicos y renglones, costo de venta y % del total ${orgTotalLabel} por sucursal, los códigos con Solicitud de Pedido por centro, los renglones SOBREPEDIDO sin Solicitud de Pedido, los pedidos con MR12, así como la tabla de avances de pedidos concluidos y nuevos de comparación vs la última carga vs la penúltima.</p>
+<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando ${introPartes}.</p>
 <br>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
@@ -5083,6 +5197,8 @@ ${mr12Block}
 ${resumenAvanceHTML ? `<p><strong>Avance de pedidos concluidos y nuevos — comparación vs última carga vs penúltima:</strong></p>\n${resumenAvanceHTML}` : ''}
 
 <p>Cada área debe trabajar en los procesos establecidos y cumplir con su parte, ya que el incumplimiento de procesos es causa raíz del problema. Se solicita atención inmediata a los renglones críticos de entrega inmediata y domicilio.</p>
+
+${sinFactBlock}
 
 <p>Quedo al pendiente de cualquier comentario.</p>
 <br>
@@ -5578,10 +5694,27 @@ const ANZ_ORG_GROUPS = [
   { prefix: 'KO', org: 'KON', label: 'KON' }
 ];
 
+// Nomenclatura del archivo exportado por centro:
+//  1) Organización de Ventas real que viene en el Excel para ese centro (la más frecuente),
+//     así cualquier org nueva (KST, etc.) sale con su propio nombre.
+//  2) Si el renglón no trae organización, se usa el mapa por prefijo de centro.
+//  3) Si tampoco coincide, se usa el prefijo del centro (ej. "KT") en lugar de "OTROS".
 function anzGetCentroGroup(centro) {
-  const c = (centro || '').toString().toUpperCase();
+  const c = (centro || '').toString().trim().toUpperCase();
+  const rows = anzCentroGroups[centro] || [];
+  const cnt = {};
+  rows.forEach(r => {
+    const o = String(r['Organizacion de Ventas'] || '').trim().toUpperCase();
+    if (o) cnt[o] = (cnt[o] || 0) + 1;
+  });
+  const orgTop = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  if (orgTop) {
+    const lbl = orgTop[0].replace(/[\\\/:\*\?"<>\|]/g, '');
+    return { prefix: c.substring(0, 2), org: lbl, label: lbl };
+  }
   for (const g of ANZ_ORG_GROUPS) if (c.startsWith(g.prefix)) return g;
-  return { prefix: 'XX', org: 'OTROS', label: 'OTROS' };
+  const pre = c.substring(0, 2).replace(/[^A-Z0-9]/g, '') || 'SIN_CENTRO';
+  return { prefix: pre, org: pre, label: pre };
 }
 
 function anzBuildWorkbook(centrosEnGrupo) {
@@ -6203,4 +6336,3 @@ window.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
-
