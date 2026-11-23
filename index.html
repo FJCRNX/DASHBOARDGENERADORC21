@@ -4633,16 +4633,27 @@ function renderEmailBody() {
   const el = document.getElementById('email-preview');
   if (!el || !FILTERED || FILTERED.length === 0) return;
 
+  // Tipo de documento ZAP0 se omite de TODOS los cálculos y tablas del correo
+  // (los filtros de Org. y Centro del dashboard se siguen respetando).
+  const CLASES_EXCLUIDAS_CORREO = ['ZAP0'];
+  const EMAIL_ROWS = FILTERED.filter(r =>
+    !CLASES_EXCLUIDAS_CORREO.includes(String(col(r,'Clase del Documento') || '').trim().toUpperCase()));
+  if (EMAIL_ROWS.length === 0) {
+    el.innerHTML = '<span style="color:#aaa;font-size:12px;">Sin renglones para el correo: todos los renglones del filtro actual son tipo de documento ZAP0.</span>';
+    window._emailBodyHtml = el.innerHTML;
+    return;
+  }
+
   const dateStr = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   // KPIs globales
-  const totalPedidos = countDistinct(FILTERED, 'Numero de Pedido');
-  const totalRenglones = FILTERED.length;
-  const totalCosto = sumField(FILTERED, 'Costo de Venta Contable Pendiente');
+  const totalPedidos = countDistinct(EMAIL_ROWS, 'Numero de Pedido');
+  const totalRenglones = EMAIL_ROWS.length;
+  const totalCosto = sumField(EMAIL_ROWS, 'Costo de Venta Contable Pendiente');
 
   // Tabla por sucursal (org de ventas)
   const byOrg = {};
-  FILTERED.forEach(r => {
+  EMAIL_ROWS.forEach(r => {
     const o = col(r,'Organizacion de Ventas') || '(Sin org)';
     const ped = col(r,'Numero de Pedido');
     const costo = parseFloat(col(r,'Costo de Venta Contable Pendiente')) || 0;
@@ -4656,7 +4667,7 @@ function renderEmailBody() {
   // Filtros activos del dashboard (se aplican también a la comparación)
   const centroFiltroActivo = document.getElementById('filter-centro')?.value || '';
   const orgFiltroActivo = document.getElementById('filter-org')?.value || '';
-  const orgsEnDatos = [...new Set(FILTERED.map(r => col(r,'Organizacion de Ventas')).filter(Boolean))];
+  const orgsEnDatos = [...new Set(EMAIL_ROWS.map(r => col(r,'Organizacion de Ventas')).filter(Boolean))];
   // Organización única del corte: filtro seleccionado, o la única org presente en los datos
   const orgUnica = orgFiltroActivo || (orgsEnDatos.length === 1 ? orgsEnDatos[0] : '');
 
@@ -4736,9 +4747,9 @@ function renderEmailBody() {
     : (orgsEnDatos.length === 1 ? `de <strong>${orgsEnDatos[0]}</strong>` : '<strong>general (todas las organizaciones)</strong>');
   const orgTotalLabel = (orgFiltroActivo || orgsEnDatos.length === 1) ? `de ${orgAlcance}` : 'general';
 
-  // 1) Agregar FILTERED por centro (datos del corte actual)
+  // 1) Agregar EMAIL_ROWS por centro (datos del corte actual)
   const byCentro = {};
-  FILTERED.forEach(r => {
+  EMAIL_ROWS.forEach(r => {
     const c = col(r,'Centro') || '(Sin centro)';
     const o = col(r,'Organizacion de Ventas') || '(Sin org)';
     const ped = col(r,'Numero de Pedido');
@@ -4873,7 +4884,7 @@ function renderEmailBody() {
 
   // ============================================
   // SOLICITUD DE PEDIDO / SOBREPEDIDO SIN COBERTURA / PEDIDOS MR12
-  // Todo sobre FILTERED, así respeta los filtros de organización y centro.
+  // Todo sobre EMAIL_ROWS, así respeta los filtros de organización y centro.
   // ============================================
   const thE = 'padding:7px 8px;text-align:center;';
   const tdE = 'padding:5px 8px;';
@@ -4881,7 +4892,7 @@ function renderEmailBody() {
 
   const sinCobByCen = {};   // SOBREPEDIDO sin Solicitud de Pedido y sin OC, por centro
   const mr12ByPed = {};     // pedidos únicos con MR12 (Motivo de Rechazo = 12)
-  FILTERED.forEach(r => {
+  EMAIL_ROWS.forEach(r => {
     const cen = col(r,'Centro') || '(Sin centro)';
     const cod = String(col(r,'Codigo de Material') || '').trim() || '(Sin código)';
     const ped = String(col(r,'Numero de Pedido') || '').trim();
@@ -4911,7 +4922,7 @@ function renderEmailBody() {
   });
 
   // Tabla 1: códigos por centro con Solicitud de Pedido (cantidad = máximo por centro&código)
-  const solPedRows = calcSolicitudPedido(FILTERED);
+  const solPedRows = calcSolicitudPedido(EMAIL_ROWS);
   let solPedBlock = '';
   if (solPedRows.length > 0) {
     const totSP = solPedRows.reduce((a, x) => ({ p: a.p + x.pend, c: a.c + x.cubierto }), { p: 0, c: 0 });
@@ -5038,14 +5049,14 @@ function renderEmailBody() {
 
   // ============================================
   // PEDIDOS SIN FACTURA (Folio Factura vacío)
-  // Se agrupa POR PEDIDO sobre FILTERED (respeta filtros de Org. y Centro).
+  // Se agrupa POR PEDIDO sobre EMAIL_ROWS (respeta filtros de Org. y Centro).
   // Un pedido se considera "sin factura" si ninguno de sus renglones trae
   // Folio Factura. Se separa por la Cantidad Entregada del pedido:
   //   · Entregada = 0      → sin entrega ni factura (revisar cancelación / apartado)
   //   · Entregada ≥ 0.01   → entregado sin factura (proceso de facturación incompleto)
   // ============================================
   const sinFactByPed = {};
-  FILTERED.forEach(r => {
+  EMAIL_ROWS.forEach(r => {
     const ped = String(col(r,'Numero de Pedido') || '').trim();
     if (!ped) return;
     const folio = String(colAny(r, ['Folio Factura', 'Folio de Factura', 'Factura', 'Numero de Factura']) || '').trim();
@@ -5152,7 +5163,7 @@ ${tablaSinFact(sinFactEnt0, '🚫 Con cantidad entregada cero (o negativa) y sin
 
   const emailHtml = `
 <p>Buen día Gerentes,</p>
-<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando ${introPartes}.</p>
+<p>Les comparto el corte de picking ${orgAlcanceTexto}${compBlock ? compBlock : ''}, agregando ${introPartes}. <em>Nota: no se incluyen los documentos tipo ZAP0.</em></p>
 <br>
 <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:1px solid #BDC3C7;margin-bottom:16px;">
   <tr style="background:#1F3864;color:#fff;">
