@@ -5086,10 +5086,67 @@ function renderEmailBody() {
   const sinFactEnt0 = pedsSinFact.filter(d => d.ent < 0.01);
   const sinFactEntPos = pedsSinFact.filter(d => d.ent >= 0.01);
 
+  // Fecha → timestamp para ordenar de menor a mayor (acepta Date, dd/mm/aaaa o texto ISO)
+  const tsFecha = v => {
+    if (v instanceof Date && !isNaN(v)) return v.getTime();
+    const s = String(v ?? '').trim();
+    const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (m) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(y, +m[2] - 1, +m[1]).getTime(); }
+    const t = Date.parse(s);
+    return isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+  };
+  // Paleta por centro: [fuerte, claro, más claro]. El mismo centro conserva su color en ambas tablas.
+  const PALETA_CEN = [
+    ['#1F618D', '#D6EAF8', '#EBF5FB'], ['#117A65', '#D1F2EB', '#E8F8F5'], ['#7D3C98', '#E8DAEF', '#F4ECF7'],
+    ['#B9770E', '#FDEBD0', '#FEF5E7'], ['#A93226', '#F5B7B1', '#FDEDEC'], ['#2E4053', '#D5D8DC', '#EAECEE'],
+    ['#196F3D', '#D4EFDF', '#E9F7EF'], ['#6E2C00', '#EDBB99', '#F6DDCC'], ['#1A5276', '#AED6F1', '#D6EAF8'],
+    ['#7B7D7D', '#E5E7E9', '#F2F3F4']
+  ];
+  const cenOrden = [...new Set(pedsSinFact.map(d => d.cen))].sort((a, b) => a.localeCompare(b));
+  const colorCen = cen => PALETA_CEN[Math.max(0, cenOrden.indexOf(cen)) % PALETA_CEN.length];
+
   const tablaSinFact = (rows, titulo, nota, cHdr, cAlt, cTot) => {
     if (rows.length === 0) return '';
-    const tot = rows.reduce((a, x) => ({ r: a.r + x.renglones, v: a.v + x.vend, e: a.e + x.ent, p: a.p + x.pend, c: a.c + x.costo }), { r: 0, v: 0, e: 0, p: 0, c: 0 });
+    const sumar = arr => arr.reduce((a, x) => ({ r: a.r + x.renglones, v: a.v + x.vend, e: a.e + x.ent, p: a.p + x.pend, c: a.c + x.costo }), { r: 0, v: 0, e: 0, p: 0, c: 0 });
+    const tot = sumar(rows);
     const n = v => fmt(v) === '0' && v !== 0 ? v.toFixed(2) : fmt(v);
+
+    // Agrupar por centro (A→Z) y, dentro de cada centro, por fecha de registro de menor a mayor
+    const grupos = {};
+    rows.forEach(x => { (grupos[x.cen] = grupos[x.cen] || []).push(x); });
+    const cuerpo = Object.keys(grupos).sort((a, b) => a.localeCompare(b)).map(cen => {
+      const lista = grupos[cen].slice().sort((a, b) => tsFecha(a.fecha) - tsFecha(b.fecha) || String(a.ped).localeCompare(String(b.ped)));
+      const [cF, cC, cCC] = colorCen(cen);
+      const st = sumar(lista);
+      const encabezado = `<tr style="background:${cF};color:#fff;">
+    <td colspan="8" style="padding:6px 8px;color:#fff;background:${cF};font-weight:bold;font-size:9.5pt;">Centro ${escHtml(cen)} · ${fmt(lista.length)} pedido${lista.length === 1 ? '' : 's'}</td>
+    <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${fmt(st.r)}</td>
+    <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${n(st.v)}</td>
+    <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${n(st.e)}</td>
+    <td style="padding:6px 8px;color:#fff;background:${cF};text-align:center;font-weight:bold;">${n(st.p)}</td>
+    <td style="padding:6px 8px;color:#fff;background:${cF};">&nbsp;</td>
+  </tr>`;
+      const filas = lista.map((x, i) => {
+        const motivo = [...x.motivos, ...[...x.mr].map(m => 'MR' + m)].join(' · ') || '—';
+        return `<tr style="background:${i % 2 === 0 ? cC : cCC};">
+    <td style="${tdE}font-weight:bold;color:${cF};border-left:4px solid ${cF};">${escHtml(x.ped)}</td>
+    <td style="${tdE}color:${cF};font-weight:bold;">${escHtml(x.cen)}</td>
+    <td style="${tdE}font-size:9pt;">${escHtml(x.org)}</td>
+    <td style="${tdE}text-align:center;font-size:9pt;">${escHtml(x.clase)}</td>
+    <td style="${tdE}text-align:center;">${escHtml(fmtFechaCorta(x.fecha))}</td>
+    <td style="${tdE}text-align:center;">${escHtml(x.cliente)}</td>
+    <td style="${tdE}font-size:9pt;">${escHtml(x.vendedor)}</td>
+    <td style="${tdE}text-align:center;">${escHtml([...x.status].join(', ') || '—')}</td>
+    <td style="${tdE}text-align:center;">${fmt(x.renglones)}</td>
+    <td style="${tdE}text-align:center;">${n(x.vend)}</td>
+    <td style="${tdE}text-align:center;font-weight:bold;">${n(x.ent)}</td>
+    <td style="${tdE}text-align:center;">${n(x.pend)}</td>
+    <td style="${tdE}font-size:8.5pt;">${escHtml(motivo)}</td>
+  </tr>`;
+      }).join('');
+      return encabezado + filas;
+    }).join('');
+
     return `
 <p><strong>${titulo} (${fmt(rows.length)} pedidos únicos):</strong></p>
 <table ${tablaE}>
@@ -5108,24 +5165,7 @@ function renderEmailBody() {
     <th style="${thE}">Cant. Pendiente</th>
     <th style="${thE}text-align:left;">Motivo / Rechazo</th>
   </tr>
-  ${rows.map((x, i) => {
-    const motivo = [...x.motivos, ...[...x.mr].map(m => 'MR' + m)].join(' · ') || '—';
-    return `<tr style="background:${i % 2 === 0 ? cAlt : '#fff'};">
-    <td style="${tdE}font-weight:bold;color:${cHdr};">${escHtml(x.ped)}</td>
-    <td style="${tdE}color:#0284c7;font-weight:bold;">${escHtml(x.cen)}</td>
-    <td style="${tdE}font-size:9pt;">${escHtml(x.org)}</td>
-    <td style="${tdE}text-align:center;font-size:9pt;">${escHtml(x.clase)}</td>
-    <td style="${tdE}text-align:center;">${escHtml(fmtFechaCorta(x.fecha))}</td>
-    <td style="${tdE}text-align:center;">${escHtml(x.cliente)}</td>
-    <td style="${tdE}font-size:9pt;">${escHtml(x.vendedor)}</td>
-    <td style="${tdE}text-align:center;">${escHtml([...x.status].join(', ') || '—')}</td>
-    <td style="${tdE}text-align:center;">${fmt(x.renglones)}</td>
-    <td style="${tdE}text-align:center;">${n(x.vend)}</td>
-    <td style="${tdE}text-align:center;font-weight:bold;">${n(x.ent)}</td>
-    <td style="${tdE}text-align:center;">${n(x.pend)}</td>
-    <td style="${tdE}font-size:8.5pt;">${escHtml(motivo)}</td>
-  </tr>`;
-  }).join('')}
+  ${cuerpo}
   <tr style="background:${cTot};border-top:2px solid ${cHdr};">
     <td colspan="8" style="padding:7px 8px;font-weight:bold;color:${cHdr};text-transform:uppercase;font-size:9pt;">Total pedidos: ${fmt(rows.length)}</td>
     <td style="padding:7px 8px;text-align:center;font-weight:bold;">${fmt(tot.r)}</td>
